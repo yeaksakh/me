@@ -49,9 +49,9 @@ class _LoginScreenState extends State<LoginScreen> {
                       color: scheme.primary,
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.delivery_dining,
-                      color: Colors.white,
+                      color: scheme.onPrimary,
                       size: 40,
                     ),
                   ),
@@ -99,12 +99,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ElevatedButton(
                     onPressed: session.busy ? null : _submit,
                     child: session.busy
-                        ? const SizedBox(
+                        ? SizedBox(
                             height: 22,
                             width: 22,
                             child: CircularProgressIndicator(
                               strokeWidth: 2,
-                              color: Colors.white,
+                              color: scheme.onPrimary,
                             ),
                           )
                         : const Text('Sign in'),

@@ -16,4 +16,20 @@ class Address {
   final String? contactPhone;
 
   String get full => '$line1, $city';
+
+  Map<String, dynamic> toJson() => {
+        'label': label,
+        'line1': line1,
+        'city': city,
+        'contactName': contactName,
+        'contactPhone': contactPhone,
+      };
+
+  factory Address.fromJson(Map<String, dynamic> json) => Address(
+        label: json['label'] as String,
+        line1: json['line1'] as String,
+        city: json['city'] as String,
+        contactName: json['contactName'] as String?,
+        contactPhone: json['contactPhone'] as String?,
+      );
 }

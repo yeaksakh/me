@@ -104,7 +104,7 @@ void main() {
       expect(controller.activeOrder?.id, '1');
     });
 
-    test('advance walks the delivery to delivered and clears active', () async {
+    test('advance walks up to on-the-way but will not deliver', () async {
       final controller = controllerWith([buildOrder(id: '1')]);
       await controller.load();
       await controller.accept('1');
@@ -113,11 +113,77 @@ void main() {
       expect(controller.orderById('1')!.status, OrderStatus.pickedUp);
       await controller.advance('1');
       expect(controller.orderById('1')!.status, OrderStatus.onTheWay);
+
+      // Closing out needs proof, so the last step is refused here.
+      expect(await controller.advance('1'), isFalse);
+      expect(controller.orderById('1')!.status, OrderStatus.onTheWay);
+      expect(controller.error, isNotNull);
+    });
+
+    test('a cash order cannot be closed without confirming the cash', () async {
+      final controller = controllerWith([buildOrder(id: '1')]);
+      await controller.load();
+      await controller.accept('1');
+      await controller.advance('1');
       await controller.advance('1');
 
-      expect(controller.orderById('1')!.status, OrderStatus.delivered);
+      expect(
+        await controller.completeDelivery('1', cashCollected: false),
+        isFalse,
+      );
+      expect(controller.orderById('1')!.status, OrderStatus.onTheWay);
+      expect(controller.error, isNotNull);
+    });
+
+    test('confirming the cash closes the order and records proof', () async {
+      final controller = controllerWith([buildOrder(id: '1')]);
+      await controller.load();
+      await controller.accept('1');
+      await controller.advance('1');
+      await controller.advance('1');
+
+      expect(
+        await controller.completeDelivery(
+          '1',
+          cashCollected: true,
+          note: '  Left with reception  ',
+        ),
+        isTrue,
+      );
+
+      final order = controller.orderById('1')!;
+      expect(order.status, OrderStatus.delivered);
+      expect(order.cashCollected, isTrue);
+      expect(order.deliveryNote, 'Left with reception');
+      expect(order.completedAt, isNotNull);
       expect(controller.activeOrder, isNull);
-      expect(controller.orderById('1')!.completedAt, isNotNull);
+    });
+
+    test('a prepaid order closes with nothing collected', () async {
+      final controller =
+          controllerWith([buildOrder(id: '1', payment: PaymentMethod.prepaid)]);
+      await controller.load();
+      await controller.accept('1');
+      await controller.advance('1');
+      await controller.advance('1');
+
+      expect(
+        await controller.completeDelivery('1', cashCollected: false),
+        isTrue,
+      );
+      expect(controller.orderById('1')!.status, OrderStatus.delivered);
+      expect(controller.orderById('1')!.cashCollected, isFalse);
+    });
+
+    test('an empty note is stored as null, not blank text', () async {
+      final controller = controllerWith([buildOrder(id: '1')]);
+      await controller.load();
+      await controller.accept('1');
+      await controller.advance('1');
+      await controller.advance('1');
+      await controller.completeDelivery('1', cashCollected: true, note: '   ');
+
+      expect(controller.orderById('1')!.deliveryNote, isNull);
     });
 
     test('declining removes the order from the available feed', () async {

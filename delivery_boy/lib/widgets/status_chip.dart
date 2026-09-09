@@ -10,7 +10,7 @@ class StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = AppTheme.statusColor(status);
+    final color = context.appColors.forStatus(status);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(

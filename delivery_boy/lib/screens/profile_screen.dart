@@ -34,8 +34,8 @@ class ProfileScreen extends StatelessWidget {
                   backgroundColor: scheme.primary,
                   child: Text(
                     driver.initials,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: scheme.onPrimary,
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                     ),

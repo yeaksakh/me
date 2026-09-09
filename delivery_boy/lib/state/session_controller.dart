@@ -1,10 +1,18 @@
 import 'package:flutter/foundation.dart';
 
+import '../data/local_store.dart';
 import '../data/mock_data.dart';
 import '../models/driver.dart';
 
 /// Who is signed in, and whether they are accepting work right now.
 class SessionController extends ChangeNotifier {
+  SessionController({LocalStore? store}) : _store = store {
+    _restore();
+  }
+
+  /// Optional. Without a store the session lives only for this run.
+  final LocalStore? _store;
+
   Driver? _driver;
   bool _isOnline = false;
   bool _busy = false;
@@ -38,6 +46,7 @@ class SessionController extends ChangeNotifier {
     _isOnline = true;
     _busy = false;
     notifyListeners();
+    await _save();
     return true;
   }
 
@@ -46,11 +55,28 @@ class SessionController extends ChangeNotifier {
     _isOnline = false;
     _error = null;
     notifyListeners();
+    _save();
   }
 
   void setOnline(bool value) {
     if (_isOnline == value) return;
     _isOnline = value;
     notifyListeners();
+    _save();
   }
+
+  /// Bring back the previous session, so a restart mid-shift does not sign
+  /// the rider out.
+  Future<void> _restore() async {
+    final store = _store;
+    if (store == null) return;
+    final saved = await store.loadSession();
+    if (!saved.signedIn || _driver != null) return;
+    _driver = MockData.driver;
+    _isOnline = saved.online;
+    notifyListeners();
+  }
+
+  Future<void> _save() async =>
+      _store?.saveSession(signedIn: _driver != null, online: _isOnline);
 }

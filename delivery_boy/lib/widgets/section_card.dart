@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../theme/app_theme.dart';
+
 /// The white rounded panel used throughout the app.
 class SectionCard extends StatelessWidget {
   const SectionCard({
@@ -17,7 +19,7 @@ class SectionCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(16);
     return Material(
-      color: Colors.white,
+      color: context.appColors.card,
       borderRadius: radius,
       child: InkWell(
         onTap: onTap,

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/order.dart';
 import '../state/orders_controller.dart';
 import '../utils/formatters.dart';
+import '../widgets/delivery_confirm_sheet.dart';
 import '../widgets/section_card.dart';
 import '../widgets/status_timeline.dart';
 import 'order_detail_screen.dart';
@@ -79,21 +80,37 @@ class ActiveDeliveryScreen extends StatelessWidget {
     OrdersController orders,
     Order order,
   ) async {
-    final wasFinalStep = order.status == OrderStatus.onTheWay;
     final messenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
-    final moved = await orders.advance(order.id);
-    if (!moved) return;
+    // The last step needs proof at the door, so it runs through the sheet.
+    if (order.status == OrderStatus.onTheWay) {
+      final proof = await DeliveryConfirmSheet.show(context, order);
+      if (proof == null) return;
 
-    if (wasFinalStep) {
+      final closed = await orders.completeDelivery(
+        order.id,
+        cashCollected: proof.cashCollected,
+        note: proof.note,
+      );
+      if (!closed) {
+        messenger.showSnackBar(
+          SnackBar(content: Text(orders.error ?? 'Could not close that order.')),
+        );
+        orders.clearError();
+        return;
+      }
+
       messenger.showSnackBar(
         SnackBar(
           content: Text('Delivered. You earned ${money(order.riderEarnings)}.'),
         ),
       );
       if (navigator.canPop()) navigator.pop();
+      return;
     }
+
+    await orders.advance(order.id);
   }
 
   Future<void> _confirmCancel(

@@ -19,6 +19,7 @@ class StatusTimeline extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final colors = context.appColors;
     final currentIndex = _steps.indexOf(current);
 
     return Column(
@@ -27,7 +28,7 @@ class StatusTimeline extends StatelessWidget {
         final step = _steps[index];
         final reached = currentIndex >= index && currentIndex != -1;
         final isLast = index == _steps.length - 1;
-        final color = reached ? AppTheme.statusColor(step) : scheme.outlineVariant;
+        final color = reached ? colors.forStatus(step) : scheme.outlineVariant;
 
         return IntrinsicHeight(
           child: Row(
@@ -44,7 +45,7 @@ class StatusTimeline extends StatelessWidget {
                       border: Border.all(color: color, width: 2),
                     ),
                     child: reached
-                        ? const Icon(Icons.check, size: 12, color: Colors.white)
+                        ? Icon(Icons.check, size: 12, color: colors.card)
                         : null,
                   ),
                   if (!isLast)

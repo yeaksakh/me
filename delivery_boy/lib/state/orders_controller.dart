@@ -100,11 +100,49 @@ class OrdersController extends ChangeNotifier {
   }
 
   /// Step the active order to the next stage of the delivery.
+  ///
+  /// Stops short of `delivered`: closing an order out requires proof, so the
+  /// last step goes through [completeDelivery] instead.
   Future<bool> advance(String orderId) async {
     final order = _findOrNull(orderId);
     final next = order?.status.next;
     if (order == null || next == null) return false;
+    if (next == OrderStatus.delivered) {
+      _error = 'Confirm the drop-off to close this order.';
+      notifyListeners();
+      return false;
+    }
     return _moveTo(orderId, next);
+  }
+
+  /// Close out a delivery. Cash orders cannot be closed until the rider
+  /// confirms they took the money.
+  Future<bool> completeDelivery(
+    String orderId, {
+    required bool cashCollected,
+    String? note,
+  }) async {
+    final order = _findOrNull(orderId);
+    if (order == null) return false;
+    if (order.paymentMethod == PaymentMethod.cash && !cashCollected) {
+      _error = 'Confirm you collected the cash first.';
+      notifyListeners();
+      return false;
+    }
+    _error = null;
+    try {
+      await _repository.completeDelivery(
+        orderId,
+        cashCollected: cashCollected,
+        note: note,
+      );
+      notifyListeners();
+      return true;
+    } catch (e) {
+      _error = 'That delivery could not be closed.';
+      notifyListeners();
+      return false;
+    }
   }
 
   Future<bool> _moveTo(String orderId, OrderStatus status) async {

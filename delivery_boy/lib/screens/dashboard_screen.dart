@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/order.dart';
+import '../theme/app_theme.dart';
 import '../state/orders_controller.dart';
 import '../state/session_controller.dart';
 import '../utils/formatters.dart';
@@ -34,7 +35,9 @@ class DashboardScreen extends StatelessWidget {
               session.isOnline ? 'You are online' : 'You are offline',
               style: TextStyle(
                 fontSize: 12,
-                color: session.isOnline ? Colors.green.shade700 : Colors.grey,
+                color: session.isOnline
+                    ? context.appColors.onTheWay
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
               ),
             ),
           ],
@@ -206,7 +209,7 @@ class _ActiveBanner extends StatelessWidget {
         children: [
           CircleAvatar(
             backgroundColor: scheme.primary,
-            child: const Icon(Icons.local_shipping, color: Colors.white),
+            child: Icon(Icons.local_shipping, color: scheme.onPrimary),
           ),
           const SizedBox(width: 14),
           Expanded(

@@ -56,6 +56,10 @@ class OrderDetailScreen extends StatelessWidget {
           OrderItemsCard(order: order),
           const SizedBox(height: 12),
           OrderPayoutCard(order: order),
+          if (order.status == OrderStatus.delivered) ...[
+            const SizedBox(height: 12),
+            DeliveryProofCard(order: order),
+          ],
           if (order.status == OrderStatus.pending) ...[
             const SizedBox(height: 20),
             ElevatedButton(
@@ -277,6 +281,66 @@ class OrderPayoutCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// What the rider recorded at the door. Only shown once delivered.
+class DeliveryProofCard extends StatelessWidget {
+  const DeliveryProofCard({super.key, required this.order});
+
+  final Order order;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return SectionCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const _CardTitle('Drop-off'),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Icon(
+                order.cashCollected
+                    ? Icons.check_circle
+                    : Icons.check_circle_outline,
+                size: 20,
+                color: scheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  order.cashCollected
+                      ? 'Collected ${money(order.amountToCollect)} in cash'
+                      : 'Nothing to collect — paid online',
+                ),
+              ),
+            ],
+          ),
+          if (order.completedAt != null) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Completed ${shortDate(order.completedAt!)} at '
+              '${clockTime(order.completedAt!)}',
+              style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+            ),
+          ],
+          if (order.deliveryNote != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(order.deliveryNote!),
+            ),
+          ],
         ],
       ),
     );
