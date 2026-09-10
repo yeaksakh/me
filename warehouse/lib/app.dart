@@ -91,8 +91,9 @@ class WarehouseApp extends StatelessWidget {
         title: 'WareHouseMgt',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
-        darkTheme: AppTheme.dark(),
-        themeMode: ThemeMode.system,
+        // Light only: the palette is the app's own, and a warehouse handset
+        // set to dark must still show the same colours as the one beside it.
+        themeMode: ThemeMode.light,
         home: const _Root(),
       ),
     );

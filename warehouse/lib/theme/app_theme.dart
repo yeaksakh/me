@@ -5,8 +5,8 @@ import '../models/fulfilment_stage.dart';
 
 /// Colours the Material scheme does not cover: the page/card split the app is
 /// built on, the per-stage accents, the three stock signals, and an accent for
-/// each area of the app so a screen is known by its colour. Defined per
-/// brightness so light and dark are both deliberate rather than derived.
+/// each area of the app so a screen is known by its colour. One palette: the
+/// app is light only.
 @immutable
 class AppColors extends ThemeExtension<AppColors> {
   const AppColors({
@@ -69,26 +69,6 @@ class AppColors extends ThemeExtension<AppColors> {
     leave: Color(0xFFF97316),
     holiday: Color(0xFFEC4899),
     pay: Color(0xFF059669),
-  );
-
-  static const dark = AppColors(
-    page: Color(0xFF0F1220),
-    card: Color(0xFF1B2033),
-    ordered: Color(0xFF7FA1FF),
-    prepared: Color(0xFFFFB84D),
-    checked: Color(0xFF4EDDB0),
-    pickedUp: Color(0xFFC4A8FF),
-    delivered: Color(0xFF6EE39A),
-    cancelled: Color(0xFFFF7A95),
-    inStock: Color(0xFF6EE39A),
-    lowStock: Color(0xFFFFB84D),
-    outOfStock: Color(0xFFFF7A95),
-    orders: Color(0xFF7FA1FF),
-    stock: Color(0xFF5EDBCB),
-    hrm: Color(0xFFB794FF),
-    leave: Color(0xFFFFA25C),
-    holiday: Color(0xFFFF8AC2),
-    pay: Color(0xFF5DE0A8),
   );
 
   /// Packed keeps the amber and Audited the green the warehouse's two stages
@@ -184,19 +164,13 @@ class AppTheme {
   /// The logo's blue.
   static const seed = Color(0xFF343DB9);
 
-  static ThemeData light() => _build(Brightness.light, AppColors.light);
-  static ThemeData dark() => _build(Brightness.dark, AppColors.dark);
-
-  static ThemeData _build(Brightness brightness, AppColors colors) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: seed,
-      brightness: brightness,
-      primary: brightness == Brightness.light ? seed : const Color(0xFF9DA7FF),
-    );
+  static ThemeData light() {
+    const colors = AppColors.light;
+    final scheme = ColorScheme.fromSeed(seedColor: seed, primary: seed);
 
     return ThemeData(
       useMaterial3: true,
-      brightness: brightness,
+      brightness: Brightness.light,
       colorScheme: scheme,
       scaffoldBackgroundColor: colors.page,
       extensions: [colors],
