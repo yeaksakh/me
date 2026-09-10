@@ -30,6 +30,7 @@ Future<void> pumpApp(WidgetTester tester,
       auth: FakeAuthApi(),
       shipments: FakeShipmentsApi(orders: orders),
       hrm: hrm ?? FakeHrmApi(),
+      watchForNewOrders: false,
     ),
   );
   await tester.pumpAndSettle();

@@ -74,6 +74,7 @@ Future<void> pumpAt(WidgetTester tester, Size size) async {
           ),
         },
       ),
+      watchForNewOrders: false,
       shipments: FakeShipmentsApi(orders: [
         // Accepted, part-packed, with a bundle item and a long name: the
         // busiest detail screen there is.

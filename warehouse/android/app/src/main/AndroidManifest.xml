@@ -3,6 +3,10 @@
          their own, so without it here only a release build cannot connect. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- The new-order alert. Android 13+ shows nothing at all without it,
+         and the app asks for it at sign-in rather than on first launch. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <!-- Where someone was standing when they clocked in or out, for the
          attendance record the website keeps. Coarse is enough for a yard and
          is the weaker ask; fine is declared because Android grants coarse-only

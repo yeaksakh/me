@@ -139,6 +139,9 @@ class FakeShipmentsApi extends ShipmentsApi {
 
   Order? stored(String id) => _orders[id];
 
+  /// An order arriving on the server between two reads.
+  void add(Order order) => _orders[order.id] = order;
+
   Order _find(String id) {
     final order = _orders[id];
     if (order == null) {

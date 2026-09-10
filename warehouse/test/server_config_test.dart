@@ -15,7 +15,11 @@ Future<void> pumpLogin(WidgetTester tester) async {
   addTearDown(tester.view.reset);
 
   await tester.pumpWidget(
-    WarehouseApp(repository: repositoryWith(), auth: FakeAuthApi()),
+    WarehouseApp(
+      repository: repositoryWith(),
+      auth: FakeAuthApi(),
+      watchForNewOrders: false,
+    ),
   );
   await tester.pumpAndSettle();
 }
