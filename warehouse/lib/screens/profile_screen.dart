@@ -35,18 +35,19 @@ class ProfileScreen extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          SectionCard(
+          HeroCard(
+            color: colors.hrm,
             child: Row(
               children: [
                 CircleAvatar(
-                  radius: 28,
-                  backgroundColor: scheme.primary,
+                  radius: 30,
+                  backgroundColor: Colors.white,
                   child: Text(
                     staff.initials,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
+                    style: TextStyle(
+                      color: colors.hrm,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
                 ),
@@ -58,21 +59,21 @@ class ProfileScreen extends StatelessWidget {
                       Text(
                         staff.name,
                         style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
                       const SizedBox(height: 2),
                       Text(
                         '${staff.role.label}'
                         '${staff.username == null ? '' : ' · ${staff.username}'}',
-                        style: TextStyle(color: scheme.onSurfaceVariant),
+                        style: TextStyle(color: Colors.white.withAlpha(220)),
                       ),
                       Text(
                         staff.warehouseName,
                         style: TextStyle(
                           fontSize: 12.5,
-                          color: scheme.onSurfaceVariant,
+                          color: Colors.white.withAlpha(200),
                         ),
                       ),
                     ],

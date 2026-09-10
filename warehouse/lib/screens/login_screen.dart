@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 
 import '../state/server_config.dart';
 import '../state/session_controller.dart';
+import '../theme/app_theme.dart';
 
 /// Username and password of the person's yeaksa.com staff account -- the same
 /// one they use on the website, so there is no second login to hand out.
@@ -88,45 +89,63 @@ class _LoginScreenState extends State<LoginScreen> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: AutofillGroup(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  GestureDetector(
-                    key: LoginScreen.logoKey,
-                    onTap: _onLogoTap,
-                    behavior: HitTestBehavior.opaque,
-                    child: Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: scheme.primary,
-                        borderRadius: BorderRadius.circular(18),
-                      ),
-                      child: const Icon(
-                        Icons.warehouse,
-                        color: Colors.white,
-                        size: 32,
-                        semanticLabel: 'WareHouseMgt',
+      body: Container(
+        // The logo's blue, top to bottom, with the form on a white sheet.
+        decoration: BoxDecoration(gradient: heroGradient(AppTheme.seed)),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: AutofillGroup(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    GestureDetector(
+                      key: LoginScreen.logoKey,
+                      onTap: _onLogoTap,
+                      behavior: HitTestBehavior.opaque,
+                      child: Center(
+                        child: Container(
+                          width: 124,
+                          height: 124,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x55000000),
+                                blurRadius: 24,
+                                offset: Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Image.asset(
+                            'assets/images/logo.png',
+                            fit: BoxFit.cover,
+                            semanticLabel: 'WareHouseMgt',
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Warehouse',
-                    style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Sign in with your yeaksa.com staff account.',
-                    style: TextStyle(color: scheme.onSurfaceVariant),
-                  ),
-                  const SizedBox(height: 28),
+                    const SizedBox(height: 18),
+                    const Text(
+                      'WareHouseMgt',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Sign in with your yeaksa.com staff account.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Colors.white.withAlpha(215)),
+                    ),
+                    const SizedBox(height: 26),
                   TextField(
                     controller: _usernameController,
                     autocorrect: false,
@@ -161,40 +180,57 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  if (session.error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      session.error!,
-                      style: TextStyle(color: scheme.error),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  ElevatedButton(
-                    onPressed: session.busy ? null : _submit,
-                    child: session.busy
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Sign in'),
-                  ),
-                  // Only worth the space once someone has moved off
-                  // yeaksa.com, where signing in to the wrong server is easy
-                  // to forget.
-                  if (!server.isDefault) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      server.baseUrl,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: scheme.primary,
+                    if (session.error != null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          session.error!,
+                          style: TextStyle(color: scheme.error),
+                        ),
                       ),
+                    ],
+                    const SizedBox(height: 20),
+                    ElevatedButton(
+                      onPressed: session.busy ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: AppTheme.seed,
+                        minimumSize: const Size.fromHeight(56),
+                        textStyle: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      child: session.busy
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Text('Sign in'),
                     ),
+                    // Only worth the space once someone has moved off
+                    // yeaksa.com, where signing in to the wrong server is easy
+                    // to forget.
+                    if (!server.isDefault) ...[
+                      const SizedBox(height: 12),
+                      Text(
+                        server.baseUrl,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

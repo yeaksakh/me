@@ -92,7 +92,7 @@ void main() {
   testWidgets('the app opens on the sign-in screen', (tester) async {
     await pumpApp(tester);
 
-    expect(find.text('Warehouse'), findsOneWidget);
+    expect(find.text('WareHouseMgt'), findsOneWidget);
     expect(find.text('Username'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Sign in'), findsOneWidget);

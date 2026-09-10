@@ -143,6 +143,7 @@ class _ShiftCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
     return SectionCard(
+      accent: entry.isOpen ? colors.prepared : colors.checked,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

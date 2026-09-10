@@ -88,6 +88,7 @@ class LeaveCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return SectionCard(
       onTap: onTap,
+      accent: leaveColor(context, leave.status),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

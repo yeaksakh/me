@@ -188,30 +188,30 @@ class _PayslipScreenState extends State<PayslipScreen> {
               : ListView(
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                   children: [
-                    SectionCard(
+                    HeroCard(
+                      color: slip.isPaid ? colors.pay : colors.leave,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Net pay',
-                            style: TextStyle(color: scheme.onSurfaceVariant),
+                            'Net pay · ${slip.monthLabel}',
+                            style: TextStyle(color: Colors.white.withAlpha(220)),
                           ),
                           Text(
                             money(slip.netPay, symbol: symbol),
-                            style: TextStyle(
-                              fontSize: 30,
+                            style: const TextStyle(
+                              fontSize: 32,
                               fontWeight: FontWeight.w800,
-                              color: colors.checked,
                             ),
                           ),
-                          const SizedBox(height: 6),
+                          const SizedBox(height: 8),
                           Row(
                             children: [
                               StatusChip(
                                 label: slip.isPaid
                                     ? 'Paid ${shortDate(slip.paidOn!)}'
                                     : 'Not paid yet',
-                                color: slip.isPaid ? colors.checked : colors.lowStock,
+                                color: Colors.white,
                               ),
                               if (slip.paidBy.isNotEmpty) ...[
                                 const SizedBox(width: 8),
@@ -219,7 +219,7 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                   'by ${slip.paidBy}',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: scheme.onSurfaceVariant,
+                                    color: Colors.white.withAlpha(220),
                                   ),
                                 ),
                               ],

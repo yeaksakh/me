@@ -40,6 +40,7 @@ class _HrmScreenState extends State<HrmScreen> {
   Widget build(BuildContext context) {
     final staff = context.watch<SessionController>().staff;
     final scheme = Theme.of(context).colorScheme;
+    final colors = context.appColors;
 
     return Scaffold(
       appBar: AppBar(
@@ -69,18 +70,21 @@ class _HrmScreenState extends State<HrmScreen> {
             const SizedBox(height: 20),
             _Door(
               icon: Icons.calendar_today,
+              color: colors.stock,
               title: 'Attendance',
               subtitle: 'Your clock-ins and hours',
               onTap: () => _open(const AttendanceScreen()),
             ),
             _Door(
               icon: Icons.event_busy,
+              color: colors.leave,
               title: 'Leave',
               subtitle: 'Your requests, and ask for leave',
               onTap: () => _open(const LeaveScreen()),
             ),
             _Door(
               icon: Icons.beach_access,
+              color: colors.holiday,
               title: 'Holidays',
               subtitle: "The shop's days off this year",
               onTap: () => _open(const HolidayScreen()),
@@ -88,12 +92,14 @@ class _HrmScreenState extends State<HrmScreen> {
             if (staff?.isAdmin ?? false)
               _Door(
                 icon: Icons.group,
+                color: colors.hrm,
                 title: 'Leave approvals',
                 subtitle: 'Approve or reject staff requests',
                 onTap: () => _open(const LeaveApprovalsScreen()),
               ),
             _Door(
               icon: Icons.payments_outlined,
+              color: colors.pay,
               title: 'Payroll',
               subtitle: 'Your payslips',
               onTap: () => _open(const PayrollScreen()),
@@ -154,27 +160,29 @@ class ClockCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final hrm = context.watch<HrmController>();
     final colors = context.appColors;
-    final scheme = Theme.of(context).colorScheme;
     final shift = hrm.openShift;
     final clockedIn = hrm.isClockedIn;
-    final accent = clockedIn ? colors.prepared : colors.ordered;
+    // Amber while a shift is running, the app's blue when the day has not
+    // started -- the same two moods YeaksaMax's clock card wears.
+    final accent = clockedIn ? colors.prepared : colors.orders;
 
-    return SectionCard(
+    return HeroCard(
+      color: accent,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Row(
             children: [
               Container(
-                width: 48,
-                height: 48,
+                width: 52,
+                height: 52,
                 decoration: BoxDecoration(
-                  color: accent.withAlpha(30),
-                  borderRadius: BorderRadius.circular(14),
+                  color: Colors.white.withAlpha(46),
+                  borderRadius: BorderRadius.circular(16),
                 ),
                 child: Icon(
                   clockedIn ? Icons.hourglass_bottom : Icons.login,
-                  color: accent,
+                  size: 28,
                 ),
               ),
               const SizedBox(width: 14),
@@ -189,8 +197,8 @@ class ClockCard extends StatelessWidget {
                               ? 'Clocked in'
                               : 'Not clocked in',
                       style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -203,7 +211,7 @@ class ClockCard extends StatelessWidget {
                               '${hoursMinutes(shift.worked)}',
                       style: TextStyle(
                         fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
+                        color: Colors.white.withAlpha(220),
                       ),
                     ),
                   ],
@@ -213,20 +221,22 @@ class ClockCard extends StatelessWidget {
           ),
           if (hrm.error != null && !hrm.shiftLoaded) ...[
             const SizedBox(height: 12),
-            Text(hrm.error!, style: TextStyle(color: scheme.error, fontSize: 13)),
+            Text(hrm.error!, style: const TextStyle(fontSize: 13)),
           ],
           const SizedBox(height: 16),
           ElevatedButton.icon(
             onPressed: hrm.busy || !hrm.shiftLoaded ? null : () => _punch(context),
             style: ElevatedButton.styleFrom(
-              backgroundColor: accent,
-              foregroundColor: Colors.white,
+              backgroundColor: Colors.white,
+              foregroundColor: accent,
+              disabledBackgroundColor: Colors.white.withAlpha(120),
               minimumSize: const Size.fromHeight(60),
+              elevation: 0,
             ),
             icon: Icon(clockedIn ? Icons.logout : Icons.login),
             label: Text(
               clockedIn ? 'Clock out' : 'Clock in',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
             ),
           ),
         ],
@@ -328,12 +338,14 @@ class _PunchDialogState extends State<_PunchDialog> {
 class _Door extends StatelessWidget {
   const _Door({
     required this.icon,
+    required this.color,
     required this.title,
     required this.subtitle,
     required this.onTap,
   });
 
   final IconData icon;
+  final Color color;
   final String title;
   final String subtitle;
   final VoidCallback onTap;
@@ -345,16 +357,17 @@ class _Door extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 10),
       child: SectionCard(
         onTap: onTap,
+        accent: color,
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: scheme.primary.withAlpha(24),
+                gradient: heroGradient(color),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: scheme.primary, size: 22),
+              child: Icon(icon, color: Colors.white, size: 22),
             ),
             const SizedBox(width: 14),
             Expanded(

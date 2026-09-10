@@ -35,6 +35,7 @@ class OrderTaskCard extends StatelessWidget {
 
     return SectionCard(
       onTap: onTap,
+      accent: colors.forStage(order.stage),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
