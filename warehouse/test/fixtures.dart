@@ -86,6 +86,12 @@ Order buildOrder({
   DateTime? placedAt,
   String? preparedById,
   String preparedByName = 'Sokha Chan',
+  DateTime? acceptedAt,
+  DateTime? packedAt,
+  String packedByName = '',
+  DateTime? auditedAt,
+  String auditedByName = '',
+  List<OrderPhoto> photos = const [],
   String note = '',
 }) {
   final items = lines ?? [buildLine()];
@@ -100,6 +106,12 @@ Order buildOrder({
     preparedBy: preparedById == null
         ? null
         : StaffRef(id: preparedById, name: preparedByName),
+    acceptedAt: acceptedAt,
+    packedAt: packedAt,
+    packedByName: packedByName,
+    auditedAt: auditedAt,
+    auditedByName: auditedByName,
+    photos: photos,
     lineCount: items.length,
     packedCount: items.where((line) => line.packed).length,
     totalQuantity: items.fold(0, (sum, line) => sum + line.quantity),

@@ -35,12 +35,14 @@ class StaffRef {
   }
 }
 
-/// A photo filed against a shipment, and the status it is evidence for.
+/// A photo filed against a shipment, the status it is evidence for, and when it
+/// was uploaded.
 class OrderPhoto {
-  const OrderPhoto({required this.url, this.stage});
+  const OrderPhoto({required this.url, this.stage, this.takenAt});
 
   final String url;
   final FulfilmentStage? stage;
+  final DateTime? takenAt;
 }
 
 /// One item on a shipment, and whether it is in the box.
@@ -177,6 +179,11 @@ class Order {
     this.amountDue = 0,
     this.note = '',
     this.preparedBy,
+    this.acceptedAt,
+    this.packedAt,
+    this.packedByName = '',
+    this.auditedAt,
+    this.auditedByName = '',
     this.lineCount = 0,
     this.packedCount = 0,
     this.totalQuantity = 0,
@@ -209,6 +216,16 @@ class Order {
 
   /// Who accepted it to pack -- the website's "Will be prepared".
   final StaffRef? preparedBy;
+
+  /// When it was accepted. Null for one accepted on the website, which records
+  /// who but not when.
+  final DateTime? acceptedAt;
+
+  /// When, and by whom, it was marked packed and audited.
+  final DateTime? packedAt;
+  final String packedByName;
+  final DateTime? auditedAt;
+  final String auditedByName;
 
   final int lineCount;
   final int packedCount;
@@ -274,6 +291,11 @@ class Order {
       amountDue: amountDue,
       note: note,
       preparedBy: clearPreparedBy ? null : (preparedBy ?? this.preparedBy),
+      acceptedAt: clearPreparedBy ? null : acceptedAt,
+      packedAt: packedAt,
+      packedByName: packedByName,
+      auditedAt: auditedAt,
+      auditedByName: auditedByName,
       lineCount: lines == null ? lineCount : nextLines.length,
       packedCount: lines == null
           ? packedCount
@@ -307,6 +329,11 @@ class Order {
       amountDue: (json['due'] as num?)?.toDouble() ?? 0,
       note: _text(json['note']) ?? '',
       preparedBy: StaffRef.fromApi(json['prepared_by']),
+      acceptedAt: _date(json['accepted_at']),
+      packedAt: _date(json['packed_at']),
+      packedByName: _text(json['packed_by_name']) ?? '',
+      auditedAt: _date(json['audited_at']),
+      auditedByName: _text(json['audited_by_name']) ?? '',
       lineCount: (json['line_count'] as num?)?.toInt() ?? 0,
       packedCount: (json['packed_count'] as num?)?.toInt() ?? 0,
       totalQuantity: (json['total_quantity'] as num?)?.toDouble() ?? 0,
@@ -322,6 +349,7 @@ class Order {
               .map((photo) => OrderPhoto(
                     url: _text(photo['url']) ?? '',
                     stage: stageFromApiOrNull(photo['stage']),
+                    takenAt: _date(photo['taken_at']),
                   ))
               .where((photo) => photo.url.isNotEmpty)
               .toList()

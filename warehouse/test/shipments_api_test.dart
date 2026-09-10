@@ -19,6 +19,11 @@ Map<String, dynamic> shipmentJson({bool withItems = false}) => {
       'address': '',
       'location': {'id': 3, 'name': 'Main'},
       'prepared_by': {'id': 42, 'name': 'Sok Dara'},
+      'accepted_at': '2026-09-10T09:15:00+07:00',
+      'packed_at': null,
+      'packed_by_name': '',
+      'audited_at': null,
+      'audited_by_name': '',
       'line_count': 2,
       'packed_count': 1,
       'total_quantity': 3.0,
@@ -123,6 +128,8 @@ void main() {
     expect(order.customerName, 'Dara Shop');
     expect(order.locationName, 'Main');
     expect(order.preparedBy!.id, '42');
+    expect(order.acceptedAt!.toUtc(), DateTime.utc(2026, 9, 10, 2, 15));
+    expect(order.packedAt, isNull);
     expect(order.packedCount, 1);
     expect(order.isCashOnDelivery, isTrue);
     expect(order.hasDetail, isFalse);
@@ -155,6 +162,7 @@ void main() {
     expect(sauce.quantityLabel, '1.5');
     expect(sauce.imageUrl, 'http://example.test/img.webp');
     expect(order.photos.single.stage, FulfilmentStage.packed);
+    expect(order.photos.single.takenAt!.toUtc(), DateTime.utc(2026, 9, 10, 3));
   });
 
   test('ticking an item posts packed to that line', () async {

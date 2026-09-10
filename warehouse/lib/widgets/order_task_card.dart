@@ -77,6 +77,11 @@ class OrderTaskCard extends StatelessWidget {
                 icon: Icons.schedule,
                 text: waitingFor(order.placedAt),
               ),
+              if (ordered && order.acceptedAt != null)
+                _Fact(
+                  icon: Icons.assignment_ind_outlined,
+                  text: 'Accepted ${relativeTime(order.acceptedAt!)}',
+                ),
             ],
           ),
           if (partlyPacked) ...[

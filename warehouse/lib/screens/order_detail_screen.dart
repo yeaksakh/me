@@ -179,8 +179,27 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   _Row(
                     icon: Icons.assignment_ind,
                     label: 'Accepted by ${order.preparedBy!.name}'
-                        '${mine ? ' (you)' : ''}',
+                        '${mine ? ' (you)' : ''}'
+                        '${order.acceptedAt == null ? '' : ' · ${dateTime(order.acceptedAt!)}'}',
                     tone: mine ? colors.checked : null,
+                  ),
+                ],
+                if (order.packedAt != null) ...[
+                  const SizedBox(height: 8),
+                  _Row(
+                    icon: Icons.inventory_2_outlined,
+                    label: 'Packed'
+                        '${order.packedByName.isEmpty ? '' : ' by ${order.packedByName}'}'
+                        ' · ${dateTime(order.packedAt!)}',
+                  ),
+                ],
+                if (order.auditedAt != null) ...[
+                  const SizedBox(height: 8),
+                  _Row(
+                    icon: Icons.fact_check_outlined,
+                    label: 'Audited'
+                        '${order.auditedByName.isEmpty ? '' : ' by ${order.auditedByName}'}'
+                        ' · ${dateTime(order.auditedAt!)}',
                   ),
                 ],
                 const SizedBox(height: 8),
@@ -294,23 +313,52 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             ),
             const SizedBox(height: 10),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 10,
+              runSpacing: 10,
               children: [
                 for (final photo in order.photos)
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10),
-                    child: Image.network(
-                      photo.url,
-                      width: 84,
-                      height: 84,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
-                        width: 84,
-                        height: 84,
-                        color: scheme.surfaceContainerHighest,
-                        child: Icon(Icons.broken_image, color: scheme.outline),
-                      ),
+                  SizedBox(
+                    width: 104,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.network(
+                            photo.url,
+                            width: 104,
+                            height: 104,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => Container(
+                              width: 104,
+                              height: 104,
+                              color: scheme.surfaceContainerHighest,
+                              child: Icon(Icons.broken_image,
+                                  color: scheme.outline),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        // Which step it is evidence for, and when it went up.
+                        Text(
+                          photo.stage?.label ?? 'Photo',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: photo.stage == null
+                                ? scheme.onSurfaceVariant
+                                : colors.forStage(photo.stage!),
+                          ),
+                        ),
+                        if (photo.takenAt != null)
+                          Text(
+                            dateTime(photo.takenAt!),
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: scheme.onSurfaceVariant,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
               ],

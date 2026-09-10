@@ -14,6 +14,9 @@ const _months = [
 
 String shortDate(DateTime date) => '${_months[date.month - 1]} ${date.day}';
 
+/// "Sep 10, 3:15 PM" -- a moment on a shipment's record.
+String dateTime(DateTime time) => '${shortDate(time)}, ${clockTime(time)}';
+
 /// "12 min ago" style text for order queues.
 String relativeTime(DateTime time, {DateTime? now}) {
   final difference = (now ?? DateTime.now()).difference(time);

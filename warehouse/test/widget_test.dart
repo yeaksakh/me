@@ -264,6 +264,44 @@ void main() {
     expect(find.text('Mark audited'), findsNothing);
   });
 
+  testWidgets('the record shows when it was accepted, packed and audited, '
+      'and when each photo went up', (tester) async {
+    await signIn(tester, orders: [
+      buildOrder(
+        id: '1',
+        stage: FulfilmentStage.audited,
+        preparedById: supervisor.id,
+        acceptedAt: DateTime(2026, 9, 10, 9, 15),
+        packedAt: DateTime(2026, 9, 10, 9, 40),
+        packedByName: 'Sokha Chan',
+        auditedAt: DateTime(2026, 9, 10, 10, 5),
+        auditedByName: 'Chan Vy',
+        photos: [
+          OrderPhoto(
+            url: 'http://example.test/p.webp',
+            stage: FulfilmentStage.audited,
+            takenAt: DateTime(2026, 9, 10, 10, 4),
+          ),
+        ],
+      ),
+    ]);
+    await openQueue(tester, 'Audited');
+    await openShipment(tester, 'YK-1');
+
+    expect(find.text('Accepted by Sokha Chan (you) · Sep 10, 9:15 AM'),
+        findsOneWidget);
+    expect(find.text('Packed by Sokha Chan · Sep 10, 9:40 AM'), findsOneWidget);
+    expect(find.text('Audited by Chan Vy · Sep 10, 10:05 AM'), findsOneWidget);
+    expect(find.text('Sep 10, 10:04 AM'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(Wrap),
+        matching: find.text('Audited'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('the stock tab lists products and filters by search',
       (tester) async {
     await signIn(tester);
