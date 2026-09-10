@@ -16,6 +16,8 @@ import 'hrm_fixtures.dart';
 /// found two real ones that way: the queue tabs at phone width, and a fixed
 /// height under the empty-count pane. Flutter throws on an overflow during a
 /// test, so pumping each screen at a small real phone size *is* the assertion.
+/// Portrait only: the app locks itself to it, so landscape is not a shape it
+/// has to hold.
 const _smallPhone = Size(360, 640);
 
 Future<void> pumpAt(WidgetTester tester, Size size) async {
@@ -212,11 +214,4 @@ void main() {
     }
   });
 
-  testWidgets('a landscape handset still lays out', (tester) async {
-    await pumpAt(tester, const Size(740, 360));
-    expect(
-      find.descendant(of: find.byType(TabBar), matching: find.text('Ordered')),
-      findsOneWidget,
-    );
-  });
 }
