@@ -173,7 +173,7 @@ class AppTheme {
       brightness: Brightness.light,
       colorScheme: scheme,
       scaffoldBackgroundColor: colors.page,
-      extensions: [colors],
+      extensions: const [colors],
       // A page slides in over a fade rather than zooming in from the middle:
       // quicker to read, and the same on every platform.
       pageTransitionsTheme: const PageTransitionsTheme(
