@@ -5,6 +5,7 @@ import '../models/hrm.dart';
 import '../state/hrm_controller.dart';
 import '../utils/formatters.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/motion.dart';
 import '../widgets/section_card.dart';
 import 'hrm_screen.dart';
 import 'leave_request_screen.dart';
@@ -64,7 +65,11 @@ class _LeaveScreenState extends State<LeaveScreen> {
                 ),
               ),
             for (final leave in leaves) ...[
-              LeaveCard(leave: leave),
+              Appear(
+                key: ValueKey(leave.id),
+                index: leaves.indexOf(leave),
+                child: LeaveCard(leave: leave),
+              ),
               const SizedBox(height: 10),
             ],
           ],
@@ -75,7 +80,8 @@ class _LeaveScreenState extends State<LeaveScreen> {
 }
 
 class LeaveCard extends StatelessWidget {
-  const LeaveCard({super.key, required this.leave, this.showName = false, this.onTap});
+  const LeaveCard(
+      {super.key, required this.leave, this.showName = false, this.onTap});
 
   final LeaveRequest leave;
 
@@ -99,7 +105,8 @@ class LeaveCard extends StatelessWidget {
                   showName && leave.userName.isNotEmpty
                       ? leave.userName
                       : leave.typeLabel,
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
               StatusChip(
@@ -110,7 +117,8 @@ class LeaveCard extends StatelessWidget {
           ),
           if (showName) ...[
             const SizedBox(height: 2),
-            Text(leave.typeLabel, style: TextStyle(color: scheme.onSurfaceVariant)),
+            Text(leave.typeLabel,
+                style: TextStyle(color: scheme.onSurfaceVariant)),
           ],
           const SizedBox(height: 8),
           Text(

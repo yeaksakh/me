@@ -37,7 +37,8 @@ void main() {
 
   group('ServerConfig.normalise', () {
     test('keeps a full https address', () {
-      expect(ServerConfig.normalise('https://yeaksa.com'), 'https://yeaksa.com');
+      expect(
+          ServerConfig.normalise('https://yeaksa.com'), 'https://yeaksa.com');
     });
 
     test('treats a bare host as https', () {
@@ -149,8 +150,8 @@ void main() {
       await tapLogo(tester, 3);
 
       expect(find.text('Server'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'https://yeaksa.com'),
-          findsOneWidget);
+      expect(
+          find.widgetWithText(TextField, 'https://yeaksa.com'), findsOneWidget);
     });
 
     testWidgets('saving a new address shows it on the sign-in screen',
@@ -195,8 +196,8 @@ void main() {
       await tester.tap(find.text('Use default'));
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(TextField, 'https://yeaksa.com'),
-          findsOneWidget);
+      expect(
+          find.widgetWithText(TextField, 'https://yeaksa.com'), findsOneWidget);
     });
 
     testWidgets('cancelling leaves the server unchanged', (tester) async {

@@ -94,6 +94,5 @@ class LocalStore {
 
   /// Forgets a server override entirely. Used by release builds, which must
   /// not merely ignore one left behind by a debug build on the same handset.
-  Future<void> clearServerUrl() async =>
-      (await _prefs).remove(_serverUrlKey);
+  Future<void> clearServerUrl() async => (await _prefs).remove(_serverUrlKey);
 }

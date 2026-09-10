@@ -50,7 +50,8 @@ class FakeHrmApi extends HrmApi {
       {required DateTime from, required DateTime to, int limit = 200}) async {
     _guard();
     return shifts
-        .where((s) => !s.clockIn.isBefore(from) &&
+        .where((s) =>
+            !s.clockIn.isBefore(from) &&
             s.clockIn.isBefore(to.add(const Duration(days: 1))))
         .toList()
       ..sort((a, b) => b.clockIn.compareTo(a.clockIn));
@@ -58,7 +59,10 @@ class FakeHrmApi extends HrmApi {
 
   @override
   Future<void> clock(String action,
-      {String? note, double? latitude, double? longitude, String? photoPath}) async {
+      {String? note,
+      double? latitude,
+      double? longitude,
+      String? photoPath}) async {
     _guard();
     punches.add({
       'action': action,
@@ -70,15 +74,18 @@ class FakeHrmApi extends HrmApi {
     final open = shifts.indexWhere((s) => s.isOpen);
     if (action == 'in') {
       if (open >= 0) {
-        throw ApiException('This user is already clocked in.', code: 'already_in');
+        throw ApiException('This user is already clocked in.',
+            code: 'already_in');
       }
-      shifts.insert(0, AttendanceEntry(
-        id: 'local:${_nextId++}',
-        clockIn: DateTime.now(),
-        note: note,
-        inLatitude: latitude,
-        inLongitude: longitude,
-      ));
+      shifts.insert(
+          0,
+          AttendanceEntry(
+            id: 'local:${_nextId++}',
+            clockIn: DateTime.now(),
+            note: note,
+            inLatitude: latitude,
+            inLongitude: longitude,
+          ));
       return;
     }
     if (open < 0) {
@@ -97,9 +104,12 @@ class FakeHrmApi extends HrmApi {
   }
 
   @override
-  Future<List<LeaveRequest>> leaves({LeaveStatus? status, int limit = 200}) async {
+  Future<List<LeaveRequest>> leaves(
+      {LeaveStatus? status, int limit = 200}) async {
     _guard();
-    return leaveRows.where((l) => status == null || l.status == status).toList();
+    return leaveRows
+        .where((l) => status == null || l.status == status)
+        .toList();
   }
 
   @override

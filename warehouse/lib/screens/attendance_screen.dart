@@ -6,6 +6,7 @@ import '../state/hrm_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/motion.dart';
 import '../widgets/section_card.dart';
 import '../widgets/stat_tile.dart';
 
@@ -123,7 +124,11 @@ class _AttendanceScreenState extends State<AttendanceScreen> {
                 ),
               ),
             for (final entry in entries) ...[
-              _ShiftCard(entry: entry),
+              Appear(
+                key: ValueKey(entry.id),
+                index: entries.indexOf(entry),
+                child: _ShiftCard(entry: entry),
+              ),
               const SizedBox(height: 10),
             ],
           ],
@@ -152,7 +157,8 @@ class _ShiftCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   longDate(entry.clockIn),
-                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w700),
                 ),
               ),
               Text(
@@ -249,14 +255,16 @@ class _Punch extends StatelessWidget {
               ),
               Text(
                 time == null ? '—' : clockTime(time!),
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                style:
+                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
               if (note != null)
                 Text(
                   note!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                  style:
+                      TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                 ),
             ],
           ),

@@ -34,29 +34,42 @@ Future<void> pumpAt(WidgetTester tester, Size size) async {
       auth: FakeAuthApi(),
       hrm: FakeHrmApi(
         shifts: [
-          buildShift(clockIn: start, clockOut: start.add(const Duration(hours: 8)),
+          buildShift(
+              clockIn: start,
+              clockOut: start.add(const Duration(hours: 8)),
               note: 'A note long enough to wrap on a narrow phone screen'),
           buildShift(id: 'local:2', clockIn: DateTime.now()),
         ],
         leaves: [buildLeave(reason: 'A reason long enough to wrap twice over')],
         holidays: [
-          Holiday(id: '1', name: 'Pchum Ben', start: DateTime.now(),
+          Holiday(
+              id: '1',
+              name: 'Pchum Ben',
+              start: DateTime.now(),
               end: DateTime.now().add(const Duration(days: 2)),
               note: 'Three days off for everyone in the building'),
         ],
         payrolls: [
-          const PayrollSummary(id: '1', month: '2026-08', netPay: 1650000,
-              basicSalary: 1500000),
+          const PayrollSummary(
+              id: '1', month: '2026-08', netPay: 1650000, basicSalary: 1500000),
         ],
         payslips: {
           '1': const Payslip(
-            id: '1', monthLabel: 'August 2026', netPay: 1650000,
+            id: '1',
+            monthLabel: 'August 2026',
+            netPay: 1650000,
             lines: [
               PayLine(label: 'Basic salary', amount: 1500000, kind: 'base'),
-              PayLine(label: 'A very long allowance name that wraps', amount: 150000),
+              PayLine(
+                  label: 'A very long allowance name that wraps',
+                  amount: 150000),
             ],
-            presentDays: 24, absentDays: 2, scheduledDays: 26, lateMinutes: 90,
-            clockedHours: 190.5, shift: '08:00 – 17:00',
+            presentDays: 24,
+            absentDays: 2,
+            scheduledDays: 26,
+            lateMinutes: 90,
+            clockedHours: 190.5,
+            shift: '08:00 – 17:00',
             absentDates: ['2026-08-04', '2026-08-19'],
           ),
         },
@@ -182,13 +195,20 @@ void main() {
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
 
-    for (final door in ['Attendance', 'Leave', 'Holidays', 'Leave approvals', 'Payroll']) {
+    for (final door in [
+      'Attendance',
+      'Leave',
+      'Holidays',
+      'Leave approvals',
+      'Payroll'
+    ]) {
       // The lower doors sit below the fold on a small phone.
       await tester.scrollUntilVisible(
         find.text(door),
         120,
         scrollable: find
-            .descendant(of: find.byType(HrmScreen), matching: find.byType(Scrollable))
+            .descendant(
+                of: find.byType(HrmScreen), matching: find.byType(Scrollable))
             .first,
       );
       await tester.tap(find.text(door));
@@ -213,5 +233,4 @@ void main() {
       await tester.pumpAndSettle();
     }
   });
-
 }

@@ -11,6 +11,7 @@ import '../state/hrm_controller.dart';
 import '../state/session_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/motion.dart';
 import '../widgets/section_card.dart';
 import 'attendance_screen.dart';
 import 'holiday_screen.dart';
@@ -66,9 +67,10 @@ class _HrmScreenState extends State<HrmScreen> {
           physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
           children: [
-            const ClockCard(),
+            const Appear(child: ClockCard()),
             const SizedBox(height: 20),
             _Door(
+              index: 1,
               icon: Icons.calendar_today,
               color: colors.stock,
               title: 'Attendance',
@@ -76,6 +78,7 @@ class _HrmScreenState extends State<HrmScreen> {
               onTap: () => _open(const AttendanceScreen()),
             ),
             _Door(
+              index: 2,
               icon: Icons.event_busy,
               color: colors.leave,
               title: 'Leave',
@@ -83,6 +86,7 @@ class _HrmScreenState extends State<HrmScreen> {
               onTap: () => _open(const LeaveScreen()),
             ),
             _Door(
+              index: 3,
               icon: Icons.beach_access,
               color: colors.holiday,
               title: 'Holidays',
@@ -91,6 +95,7 @@ class _HrmScreenState extends State<HrmScreen> {
             ),
             if (staff?.isAdmin ?? false)
               _Door(
+                index: 4,
                 icon: Icons.group,
                 color: colors.hrm,
                 title: 'Leave approvals',
@@ -98,6 +103,7 @@ class _HrmScreenState extends State<HrmScreen> {
                 onTap: () => _open(const LeaveApprovalsScreen()),
               ),
             _Door(
+              index: 5,
               icon: Icons.payments_outlined,
               color: colors.pay,
               title: 'Payroll',
@@ -180,9 +186,12 @@ class ClockCard extends StatelessWidget {
                   color: Colors.white.withAlpha(46),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Icon(
-                  clockedIn ? Icons.hourglass_bottom : Icons.login,
-                  size: 28,
+                child: Morph(
+                  child: Icon(
+                    clockedIn ? Icons.hourglass_bottom : Icons.login,
+                    key: ValueKey(clockedIn),
+                    size: 28,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -225,7 +234,8 @@ class ClockCard extends StatelessWidget {
           ],
           const SizedBox(height: 16),
           ElevatedButton.icon(
-            onPressed: hrm.busy || !hrm.shiftLoaded ? null : () => _punch(context),
+            onPressed:
+                hrm.busy || !hrm.shiftLoaded ? null : () => _punch(context),
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: accent,
@@ -284,9 +294,7 @@ class _PunchDialogState extends State<_PunchDialog> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            widget.clockingIn
-                ? 'Start your shift now?'
-                : 'End your shift now?',
+            widget.clockingIn ? 'Start your shift now?' : 'End your shift now?',
             style: TextStyle(color: scheme.onSurfaceVariant),
           ),
           const SizedBox(height: 14),
@@ -337,6 +345,7 @@ class _PunchDialogState extends State<_PunchDialog> {
 
 class _Door extends StatelessWidget {
   const _Door({
+    required this.index,
     required this.icon,
     required this.color,
     required this.title,
@@ -344,6 +353,7 @@ class _Door extends StatelessWidget {
     required this.onTap,
   });
 
+  final int index;
   final IconData icon;
   final Color color;
   final String title;
@@ -353,47 +363,50 @@ class _Door extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: SectionCard(
-        onTap: onTap,
-        accent: color,
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: heroGradient(color),
-                borderRadius: BorderRadius.circular(12),
+    return Appear(
+      index: index,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: SectionCard(
+          onTap: onTap,
+          accent: color,
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: heroGradient(color),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: Colors.white, size: 22),
               ),
-              child: Icon(icon, color: Colors.white, size: 22),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 15.5,
-                      fontWeight: FontWeight.w600,
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 15.5,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: TextStyle(
-                      fontSize: 12.5,
-                      color: scheme.onSurfaceVariant,
+                    const SizedBox(height: 2),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            Icon(Icons.chevron_right, color: scheme.outline),
-          ],
+              Icon(Icons.chevron_right, color: scheme.outline),
+            ],
+          ),
         ),
       ),
     );
@@ -416,7 +429,8 @@ class StatusChip extends StatelessWidget {
         ),
         child: Text(
           label,
-          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w600),
+          style: TextStyle(
+              color: color, fontSize: 12, fontWeight: FontWeight.w600),
         ),
       );
 }

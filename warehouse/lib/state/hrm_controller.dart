@@ -62,7 +62,8 @@ class HrmController extends ChangeNotifier {
   }
 
   /// Shifts between [from] and [to], newest first.
-  Future<void> loadHistory({required DateTime from, required DateTime to}) async {
+  Future<void> loadHistory(
+      {required DateTime from, required DateTime to}) async {
     final id = userId();
     if (id == null) return;
     await _read(() async {
@@ -130,7 +131,11 @@ class HrmController extends ChangeNotifier {
       return false;
     }
     final done = await _write(() => _api.requestLeave(
-        type: type.id, start: start, end: end, reason: reason, halfDay: halfDay));
+        type: type.id,
+        start: start,
+        end: end,
+        reason: reason,
+        halfDay: halfDay));
     if (done) await loadLeaves();
     return done;
   }

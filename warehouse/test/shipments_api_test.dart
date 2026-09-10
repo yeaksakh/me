@@ -81,7 +81,8 @@ Map<String, dynamic> shipmentJson({bool withItems = false}) => {
       },
     };
 
-ShipmentsApi apiAnswering(http.Response Function(http.Request request) answer) =>
+ShipmentsApi apiAnswering(
+        http.Response Function(http.Request request) answer) =>
     ShipmentsApi(
       baseUrl: () => 'https://yeaksa.com',
       token: () => 'tok-123',
@@ -92,7 +93,8 @@ http.Response json(Object body, [int status = 200]) =>
     http.Response(jsonEncode(body), status,
         headers: {'content-type': 'application/json'});
 
-Matcher throwsShipments({Object? message, int? status, String? code}) => throwsA(
+Matcher throwsShipments({Object? message, int? status, String? code}) =>
+    throwsA(
       isA<ShipmentsException>()
           .having((e) => e.message, 'message', message ?? anything)
           .having((e) => e.status, 'status', status ?? anything)
@@ -221,7 +223,8 @@ void main() {
   });
 
   test('a server without these endpoints says so', () async {
-    final api = apiAnswering((_) => http.Response('<html>Not Found</html>', 404));
+    final api =
+        apiAnswering((_) => http.Response('<html>Not Found</html>', 404));
 
     await expectLater(
       api.list(FulfilmentStage.ordered),

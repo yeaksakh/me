@@ -7,6 +7,7 @@ import '../state/session_controller.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/motion.dart';
 import '../widgets/section_card.dart';
 import '../widgets/stat_tile.dart';
 import 'hrm_screen.dart';
@@ -31,7 +32,8 @@ class _PayrollScreenState extends State<PayrollScreen> {
   @override
   Widget build(BuildContext context) {
     final hrm = context.watch<HrmController>();
-    final symbol = context.watch<SessionController>().staff?.currencySymbol ?? r'$';
+    final symbol =
+        context.watch<SessionController>().staff?.currencySymbol ?? r'$';
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
     final payrolls = hrm.payrolls;
@@ -83,49 +85,55 @@ class _PayrollScreenState extends State<PayrollScreen> {
                 ),
               ),
             for (final payroll in payrolls) ...[
-              SectionCard(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => PayslipScreen(payrollId: payroll.id),
+              Appear(
+                key: ValueKey(payroll.id),
+                index: payrolls.indexOf(payroll),
+                child: SectionCard(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => PayslipScreen(payrollId: payroll.id),
+                    ),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            monthLabel(payroll.month),
-                            style: const TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              monthLabel(payroll.month),
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            payroll.paidOn == null
-                                ? 'Not paid yet'
-                                : 'Paid ${shortDate(payroll.paidOn!)}',
-                            style: TextStyle(
-                              fontSize: 12.5,
-                              color: scheme.onSurfaceVariant,
+                            const SizedBox(height: 2),
+                            Text(
+                              payroll.paidOn == null
+                                  ? 'Not paid yet'
+                                  : 'Paid ${shortDate(payroll.paidOn!)}',
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                    Text(
-                      money(payroll.netPay, symbol: symbol),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: payroll.paidOn == null ? colors.lowStock : colors.checked,
+                      Text(
+                        money(payroll.netPay, symbol: symbol),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: payroll.paidOn == null
+                              ? colors.lowStock
+                              : colors.checked,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    Icon(Icons.chevron_right, color: scheme.outline),
-                  ],
+                      const SizedBox(width: 6),
+                      Icon(Icons.chevron_right, color: scheme.outline),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 10),
@@ -169,7 +177,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
   @override
   Widget build(BuildContext context) {
     final hrm = context.watch<HrmController>();
-    final symbol = context.watch<SessionController>().staff?.currencySymbol ?? r'$';
+    final symbol =
+        context.watch<SessionController>().staff?.currencySymbol ?? r'$';
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
     final slip = _slip;
@@ -182,7 +191,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
               ? Center(
                   child: Padding(
                     padding: const EdgeInsets.all(24),
-                    child: Text(hrm.error ?? 'This payslip could not be loaded.'),
+                    child:
+                        Text(hrm.error ?? 'This payslip could not be loaded.'),
                   ),
                 )
               : ListView(
@@ -195,7 +205,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                         children: [
                           Text(
                             'Net pay · ${slip.monthLabel}',
-                            style: TextStyle(color: Colors.white.withAlpha(220)),
+                            style:
+                                TextStyle(color: Colors.white.withAlpha(220)),
                           ),
                           Text(
                             money(slip.netPay, symbol: symbol),
@@ -263,7 +274,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                             const Divider(height: 18),
                             _Line(
                               label: 'Deductions',
-                              amount: money(-slip.totalDeductions, symbol: symbol),
+                              amount:
+                                  money(-slip.totalDeductions, symbol: symbol),
                               tone: colors.outOfStock,
                             ),
                             const Divider(height: 18),
@@ -303,7 +315,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                           if (slip.clockedHours != null)
                             _Line(
                               label: 'Hours clocked',
-                              amount: '${slip.clockedHours!.toStringAsFixed(1)} h',
+                              amount:
+                                  '${slip.clockedHours!.toStringAsFixed(1)} h',
                             ),
                           if (slip.lateMinutes != null && slip.lateMinutes! > 0)
                             _Line(
@@ -311,12 +324,14 @@ class _PayslipScreenState extends State<PayslipScreen> {
                               amount: '${slip.lateMinutes!.round()} min',
                               tone: colors.lowStock,
                             ),
-                          if (slip.paidLeaveDays != null && slip.paidLeaveDays! > 0)
+                          if (slip.paidLeaveDays != null &&
+                              slip.paidLeaveDays! > 0)
                             _Line(
                               label: 'Paid leave',
                               amount: _days(slip.paidLeaveDays!),
                             ),
-                          if (slip.unpaidLeaveDays != null && slip.unpaidLeaveDays! > 0)
+                          if (slip.unpaidLeaveDays != null &&
+                              slip.unpaidLeaveDays! > 0)
                             _Line(
                               label: 'Unpaid leave',
                               amount: _days(slip.unpaidLeaveDays!),
@@ -344,7 +359,8 @@ class _PayslipScreenState extends State<PayslipScreen> {
                                 ),
                                 Text(
                                   leave.daysLabel,
-                                  style: TextStyle(color: scheme.onSurfaceVariant),
+                                  style:
+                                      TextStyle(color: scheme.onSurfaceVariant),
                                 ),
                               ],
                             ),
@@ -411,7 +427,8 @@ class _Line extends StatelessWidget {
                 if (detail.isNotEmpty)
                   Text(
                     detail,
-                    style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
+                    style:
+                        TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
                   ),
               ],
             ),

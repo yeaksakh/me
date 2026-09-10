@@ -74,7 +74,8 @@ OrderLine buildLine({
       row: row,
       position: position,
       packed: packed,
-      packedBy: packed ? StaffRef(id: supervisor.id, name: supervisor.name) : null,
+      packedBy:
+          packed ? StaffRef(id: supervisor.id, name: supervisor.name) : null,
     );
 
 /// A shipment with its items loaded, as an opened one is.
@@ -159,7 +160,9 @@ class FakeShipmentsApi extends ShipmentsApi {
     for (final order in _orders.values) {
       counts[order.stage] = (counts[order.stage] ?? 0) + 1;
     }
-    final orders = _orders.values.where((order) => order.stage == stage).toList()
+    final orders = _orders.values
+        .where((order) => order.stage == stage)
+        .toList()
       ..sort((a, b) => b.placedAt.compareTo(a.placedAt));
     return ShipmentPage(orders: orders, counts: counts);
   }

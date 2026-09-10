@@ -105,7 +105,8 @@ extension LeaveStatusX on LeaveStatus {
       };
 }
 
-LeaveStatus leaveStatusFromApi(Object? value) => switch ('$value'.toLowerCase()) {
+LeaveStatus leaveStatusFromApi(Object? value) =>
+    switch ('$value'.toLowerCase()) {
       'approved' => LeaveStatus.approved,
       'rejected' => LeaveStatus.rejected,
       'cancelled' => LeaveStatus.cancelled,
@@ -157,7 +158,8 @@ class LeaveRequest {
       refNo: _text(json['ref_no']) ?? '#${json['id']}',
       userName: _text(json['user_name']) ?? '',
       type: _text(json['leave_type']) ?? '',
-      typeLabel: _text(json['leave_type_label']) ?? _text(json['leave_type']) ?? '',
+      typeLabel:
+          _text(json['leave_type_label']) ?? _text(json['leave_type']) ?? '',
       start: start,
       end: _day(json['end_date']) ?? start,
       totalDays: _num(json['total_days']) ?? 1,
@@ -240,7 +242,11 @@ class PayrollSummary {
 
 /// One row of the payslip's maths.
 class PayLine {
-  const PayLine({required this.label, required this.amount, this.kind = 'add', this.when = ''});
+  const PayLine(
+      {required this.label,
+      required this.amount,
+      this.kind = 'add',
+      this.when = ''});
 
   final String label;
   final double amount;

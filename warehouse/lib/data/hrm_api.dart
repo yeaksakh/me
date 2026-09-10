@@ -68,7 +68,8 @@ class HrmApi {
 
   /// Leave requests the signed-in person may see: their own, or everyone's
   /// for someone who approves them.
-  Future<List<LeaveRequest>> leaves({LeaveStatus? status, int limit = 200}) async {
+  Future<List<LeaveRequest>> leaves(
+      {LeaveStatus? status, int limit = 200}) async {
     final body = await _client.get('/api/leaves', query: {
       if (status != null) 'status': status.apiValue,
       'limit': '$limit',
@@ -124,7 +125,8 @@ class HrmApi {
 
   /// The signed-in person's payslips, newest month first.
   Future<List<PayrollSummary>> payrolls() async {
-    final body = await _client.get('/api/payrolls/mine', query: {'limit': '60'});
+    final body =
+        await _client.get('/api/payrolls/mine', query: {'limit': '60'});
     final data = body['data'];
     final list = data is Map<String, dynamic> ? data['payrolls'] : data;
     return list is List
@@ -146,11 +148,12 @@ class HrmApi {
 
   static List<Map<String, dynamic>> _rows(Map<String, dynamic> body) {
     final data = body['data'];
-    return data is List ? data.whereType<Map<String, dynamic>>().toList() : const [];
+    return data is List
+        ? data.whereType<Map<String, dynamic>>().toList()
+        : const [];
   }
 
-  static String _ymd(DateTime day) =>
-      '${day.year.toString().padLeft(4, '0')}-'
+  static String _ymd(DateTime day) => '${day.year.toString().padLeft(4, '0')}-'
       '${day.month.toString().padLeft(2, '0')}-'
       '${day.day.toString().padLeft(2, '0')}';
 }

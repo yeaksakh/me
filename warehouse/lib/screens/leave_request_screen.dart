@@ -90,7 +90,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
     messenger
       ..hideCurrentSnackBar()
       ..showSnackBar(
-        const SnackBar(content: Text('Leave requested — waiting for approval.')),
+        const SnackBar(
+            content: Text('Leave requested — waiting for approval.')),
       );
   }
 
@@ -152,7 +153,8 @@ class _LeaveRequestScreenState extends State<LeaveRequestScreen> {
           ),
           Text(
             _halfDay ? 'Half a day' : '$_days day${_days == 1 ? '' : 's'}',
-            style: TextStyle(fontWeight: FontWeight.w600, color: scheme.primary),
+            style:
+                TextStyle(fontWeight: FontWeight.w600, color: scheme.primary),
           ),
           const SizedBox(height: 14),
           TextField(

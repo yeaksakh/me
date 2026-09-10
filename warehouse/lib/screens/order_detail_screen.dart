@@ -241,7 +241,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               icon: Icons.person_pin_outlined,
               color: scheme.onSurfaceVariant,
               title: 'Being packed by ${order.preparedBy!.name}',
-              message: 'Only the person who accepted a shipment ticks its items.',
+              message:
+                  'Only the person who accepted a shipment ticks its items.',
             ),
           ],
           if (order.isCashOnDelivery) ...[

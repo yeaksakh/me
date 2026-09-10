@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../models/hrm.dart';
 import '../state/hrm_controller.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/motion.dart';
 import 'leave_screen.dart';
 
 /// A manager's view: every request, pending first, each one tappable to
@@ -39,7 +40,8 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
                 '${leave.typeLabel}',
                 style: const TextStyle(fontWeight: FontWeight.w700),
               ),
-              subtitle: Text(leave.reason.isEmpty ? leave.daysLabel : leave.reason),
+              subtitle:
+                  Text(leave.reason.isEmpty ? leave.daysLabel : leave.reason),
             ),
             const Divider(height: 1),
             ListTile(
@@ -125,10 +127,14 @@ class _LeaveApprovalsScreenState extends State<LeaveApprovalsScreen> {
                 ),
               ),
             for (final leave in leaves) ...[
-              LeaveCard(
-                leave: leave,
-                showName: true,
-                onTap: hrm.busy ? null : () => _decide(leave),
+              Appear(
+                key: ValueKey(leave.id),
+                index: leaves.indexOf(leave),
+                child: LeaveCard(
+                  leave: leave,
+                  showName: true,
+                  onTap: hrm.busy ? null : () => _decide(leave),
+                ),
               ),
               const SizedBox(height: 10),
             ],

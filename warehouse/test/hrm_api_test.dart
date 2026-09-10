@@ -34,7 +34,8 @@ Map<String, dynamic> shiftJson({bool open = true}) => {
       'clock_in_lng': 104.9282,
       'clock_out_lat': null,
       'clock_out_lng': null,
-      'clock_in_photo': 'https://yeaksa.com/uploads/companies/3/attendance/x.webp',
+      'clock_in_photo':
+          'https://yeaksa.com/uploads/companies/3/attendance/x.webp',
       'clock_out_photo': '',
       'clock_in_location': '11.5564, 104.9282',
       'clock_out_location': null,
@@ -45,7 +46,10 @@ void main() {
     late http.Request sent;
     final api = apiAnswering((request) {
       sent = request;
-      return json({'success': true, 'data': [shiftJson()]});
+      return json({
+        'success': true,
+        'data': [shiftJson()]
+      });
     });
 
     final shift = await api.openShift('42');
@@ -71,7 +75,10 @@ void main() {
     late http.Request sent;
     final api = apiAnswering((request) {
       sent = request;
-      return json({'success': true, 'data': [shiftJson(open: false)]});
+      return json({
+        'success': true,
+        'data': [shiftJson(open: false)]
+      });
     });
 
     final shifts = await api.attendance('42',
@@ -80,14 +87,18 @@ void main() {
     expect(sent.url.queryParameters['from'], '2026-09-01');
     expect(sent.url.queryParameters['to'], '2026-09-10');
     expect(shifts.single.isOpen, isFalse);
-    expect(shifts.single.worked, const Duration(hours: 9, minutes: 29, seconds: 52));
+    expect(shifts.single.worked,
+        const Duration(hours: 9, minutes: 29, seconds: 52));
   });
 
   test('a clock-in posts action, note and position as JSON', () async {
     late http.Request sent;
     final api = apiAnswering((request) {
       sent = request;
-      return json({'success': true, 'data': {'id': 1, 'clock_in_time': 'x'}});
+      return json({
+        'success': true,
+        'data': {'id': 1, 'clock_in_time': 'x'}
+      });
     });
 
     await api.clock('in', note: ' floor ', latitude: 11.5, longitude: 104.9);
@@ -103,7 +114,10 @@ void main() {
     late http.Request sent;
     final api = apiAnswering((request) {
       sent = request;
-      return json({'success': true, 'data': {'id': 1, 'clock_out_time': 'x'}});
+      return json({
+        'success': true,
+        'data': {'id': 1, 'clock_out_time': 'x'}
+      });
     });
 
     // A file the picker would have written.
@@ -129,7 +143,8 @@ void main() {
     await expectLater(
       api.clock('in'),
       throwsA(isA<ApiException>()
-          .having((e) => e.message, 'message', 'This user is already clocked in.')
+          .having(
+              (e) => e.message, 'message', 'This user is already clocked in.')
           .having((e) => e.code, 'code', 'already_in')),
     );
   });
@@ -138,7 +153,11 @@ void main() {
     final api = apiAnswering((_) => json({
           'success': true,
           'data': [
-            {'id': 'annual', 'key': 'annual', 'leave_type': 'ច្បាប់ប្រចាំឆ្នាំ (Annual leave)'},
+            {
+              'id': 'annual',
+              'key': 'annual',
+              'leave_type': 'ច្បាប់ប្រចាំឆ្នាំ (Annual leave)'
+            },
           ],
         }));
 
@@ -155,9 +174,15 @@ void main() {
       return json({
         'success': true,
         'data': {
-          'id': 749, 'ref_no': '#749', 'user_id': 42, 'leave_type': 'sick',
-          'leave_type_label': 'ច្បាប់ឈឺ (Sick leave)', 'start_date': '2026-09-10',
-          'end_date': '2026-09-12', 'total_days': 3, 'is_half_day': false,
+          'id': 749,
+          'ref_no': '#749',
+          'user_id': 42,
+          'leave_type': 'sick',
+          'leave_type_label': 'ច្បាប់ឈឺ (Sick leave)',
+          'start_date': '2026-09-10',
+          'end_date': '2026-09-12',
+          'total_days': 3,
+          'is_half_day': false,
           'status': 'pending',
         },
       });
@@ -188,8 +213,14 @@ void main() {
       sent = request;
       return json({
         'success': true,
-        'data': {'id': 1, 'start_date': '2026-09-10', 'end_date': '2026-09-10',
-                 'total_days': 0.5, 'is_half_day': true, 'status': 'pending'},
+        'data': {
+          'id': 1,
+          'start_date': '2026-09-10',
+          'end_date': '2026-09-10',
+          'total_days': 0.5,
+          'is_half_day': true,
+          'status': 'pending'
+        },
       });
     });
 
@@ -211,7 +242,10 @@ void main() {
     late http.Request sent;
     final api = apiAnswering((request) {
       sent = request;
-      return json({'success': true, 'data': {'id': 748, 'status': 'approved'}});
+      return json({
+        'success': true,
+        'data': {'id': 748, 'status': 'approved'}
+      });
     });
 
     await api.setLeaveStatus('748', LeaveStatus.approved);
@@ -220,16 +254,22 @@ void main() {
     expect(jsonDecode(sent.body), {'status': 'approved'});
   });
 
-  test('payrolls come out of the nested envelope, and a payslip parses', () async {
+  test('payrolls come out of the nested envelope, and a payslip parses',
+      () async {
     final api = apiAnswering((request) {
       if (request.url.path == '/api/payrolls/mine') {
         return json({
           'success': true,
           'data': {
             'payrolls': [
-              {'id': 331, 'month': '2026-08', 'net_pay': 412.75,
-               'basic_salary': 450.0, 'payment_status': 'final',
-               'paid_on': '2026-09-05'},
+              {
+                'id': 331,
+                'month': '2026-08',
+                'net_pay': 412.75,
+                'basic_salary': 450.0,
+                'payment_status': 'final',
+                'paid_on': '2026-09-05'
+              },
             ],
             'pay_components': [],
           },
@@ -238,16 +278,35 @@ void main() {
       return json({
         'success': true,
         'data': {
-          'id': 331, 'month_label': 'August 2026', 'net_pay': 412.75,
+          'id': 331,
+          'month_label': 'August 2026',
+          'net_pay': 412.75,
           'basic_salary': {'amount': 450.0, 'details': {}},
-          'total_earnings': 470.0, 'total_deductions': 57.25,
+          'total_earnings': 470.0,
+          'total_deductions': 57.25,
           'lines': [
-            {'label': 'Basic salary', 'amount': 450.0, 'kind': 'base', 'when': ''},
-            {'label': 'Late', 'amount': 7.25, 'kind': 'minus', 'when': '3 days'},
+            {
+              'label': 'Basic salary',
+              'amount': 450.0,
+              'kind': 'base',
+              'when': ''
+            },
+            {
+              'label': 'Late',
+              'amount': 7.25,
+              'kind': 'minus',
+              'when': '3 days'
+            },
           ],
-          'work': {'present_days': 24, 'absent_days': 1, 'scheduled_days': 25,
-                   'late_minutes': 42, 'clocked_seconds': 628195.5,
-                   'shift': '08:00 – 17:00', 'absent_dates': ['2026-08-14']},
+          'work': {
+            'present_days': 24,
+            'absent_days': 1,
+            'scheduled_days': 25,
+            'late_minutes': 42,
+            'clocked_seconds': 628195.5,
+            'shift': '08:00 – 17:00',
+            'absent_dates': ['2026-08-14']
+          },
           'leaves': [],
           'payment': {'paid_on': '2026-09-05', 'paid_by': 'Owner'},
           'employee': {'full_name': 'Sok Dara'},
@@ -275,13 +334,20 @@ void main() {
     final api = apiAnswering((_) => json({
           'success': true,
           'data': [
-            {'id': 21, 'name': 'Pchum Ben', 'holiday_type': 'public',
-             'start_date': '2026-09-21', 'end_date': '2026-09-23',
-             'is_recurring': false, 'note': null},
+            {
+              'id': 21,
+              'name': 'Pchum Ben',
+              'holiday_type': 'public',
+              'start_date': '2026-09-21',
+              'end_date': '2026-09-23',
+              'is_recurring': false,
+              'note': null
+            },
           ],
         }));
 
-    final holidays = await api.holidays(from: DateTime(2026), to: DateTime(2026, 12, 31));
+    final holidays =
+        await api.holidays(from: DateTime(2026), to: DateTime(2026, 12, 31));
 
     expect(holidays.single.name, 'Pchum Ben');
     expect(holidays.single.days, 3);

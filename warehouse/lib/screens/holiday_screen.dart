@@ -138,7 +138,8 @@ class _HolidayScreenState extends State<HolidayScreen> {
               const _Heading('Already passed'),
               for (final holiday in past) ...[
                 SectionCard(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   child: Row(
                     children: [
                       Expanded(

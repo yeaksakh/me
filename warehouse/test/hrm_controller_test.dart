@@ -48,7 +48,8 @@ void main() {
       expect(api.punches.single['action'], 'out');
     });
 
-    test("a refusal is the server's sentence, and the state is re-read", () async {
+    test("a refusal is the server's sentence, and the state is re-read",
+        () async {
       final api = FakeHrmApi();
       final hrm = controllerOver(api);
       await hrm.loadShift();
@@ -93,14 +94,20 @@ void main() {
 
       expect(
         await hrm.requestLeave(
-            type: sick, start: DateTime(2026, 9, 10), end: DateTime(2026, 9, 10), reason: ' '),
+            type: sick,
+            start: DateTime(2026, 9, 10),
+            end: DateTime(2026, 9, 10),
+            reason: ' '),
         isFalse,
       );
       expect(hrm.error, contains('why'));
 
       expect(
         await hrm.requestLeave(
-            type: sick, start: DateTime(2026, 9, 10), end: DateTime(2026, 9, 8), reason: 'x'),
+            type: sick,
+            start: DateTime(2026, 9, 10),
+            end: DateTime(2026, 9, 8),
+            reason: 'x'),
         isFalse,
       );
       expect(hrm.error, contains('before'));

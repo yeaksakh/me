@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'motion.dart';
 import 'section_card.dart';
 
 /// A number worth knowing at a glance, on a tile that wears its own colour.
@@ -42,7 +43,7 @@ class StatTile extends StatelessWidget {
             child: Icon(icon, size: 19, color: color),
           ),
           const SizedBox(height: 10),
-          Text(
+          AnimatedCount(
             value,
             style: TextStyle(
               fontSize: 20,

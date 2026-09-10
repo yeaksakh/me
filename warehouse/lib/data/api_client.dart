@@ -59,8 +59,7 @@ class ApiClient {
   Uri _uri(String path, [Map<String, String>? query]) =>
       Uri.parse('${_baseUrl()}$path').replace(queryParameters: query);
 
-  Future<Map<String, dynamic>> get(String path,
-          {Map<String, String>? query}) =>
+  Future<Map<String, dynamic>> get(String path, {Map<String, String>? query}) =>
       _send(() => _http.get(_uri(path, query), headers: _headers()));
 
   Future<Map<String, dynamic>> post(String path,

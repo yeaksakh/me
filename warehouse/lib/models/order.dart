@@ -321,8 +321,9 @@ class Order {
           _text(json['customer']) ?? _text(json['customer_name']) ?? 'Customer',
       customerPhone: _text(json['customer_phone']) ?? '',
       shippingAddress: _text(json['address']) ?? '',
-      locationName:
-          location is Map<String, dynamic> ? (_text(location['name']) ?? '') : '',
+      locationName: location is Map<String, dynamic>
+          ? (_text(location['name']) ?? '')
+          : '',
       placedAt: _date(json['ordered_at']) ?? DateTime.now(),
       stage: stageFromApi(json['shipping_status']),
       paymentStatus: paymentStatusFromApi(json['payment_status']),

@@ -62,7 +62,11 @@ class HeroCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => AnimatedContainer(
+        // Animated, so a card whose colour follows a state -- the clock's
+        // amber and blue -- slides between them rather than snapping.
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
         padding: padding,
         decoration: BoxDecoration(
           gradient: heroGradient(color),

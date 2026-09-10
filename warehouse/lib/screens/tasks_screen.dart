@@ -7,6 +7,7 @@ import '../state/stock_controller.dart';
 import '../state/tasks_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/motion.dart';
 import '../widgets/order_task_card.dart';
 import 'order_detail_screen.dart';
 
@@ -102,21 +103,25 @@ class _Badge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (count == 0) return const SizedBox.shrink();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withAlpha(36),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        '$count',
-        style: TextStyle(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: color,
-        ),
-      ),
+    return Morph(
+      child: count == 0
+          ? const SizedBox.shrink(key: ValueKey('none'))
+          : Container(
+              key: ValueKey(count),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+              decoration: BoxDecoration(
+                color: color.withAlpha(36),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                '$count',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: color,
+                ),
+              ),
+            ),
     );
   }
 }
@@ -180,12 +185,16 @@ class _Queue extends StatelessWidget {
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
                 final order = orders[index];
-                return OrderTaskCard(
-                  order: order,
-                  staffId: staffId,
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => OrderDetailScreen(orderId: order.id),
+                return Appear(
+                  key: ValueKey(order.id),
+                  index: index,
+                  child: OrderTaskCard(
+                    order: order,
+                    staffId: staffId,
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => OrderDetailScreen(orderId: order.id),
+                      ),
                     ),
                   ),
                 );

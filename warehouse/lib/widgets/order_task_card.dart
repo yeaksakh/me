@@ -31,7 +31,8 @@ class OrderTaskCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
     final ordered = order.stage == FulfilmentStage.ordered;
-    final partlyPacked = ordered && order.packedCount > 0 && !order.isFullyPacked;
+    final partlyPacked =
+        ordered && order.packedCount > 0 && !order.isFullyPacked;
 
     return SectionCard(
       onTap: onTap,
@@ -89,11 +90,17 @@ class OrderTaskCard extends StatelessWidget {
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(3),
-              child: LinearProgressIndicator(
-                value: order.packProgress,
-                minHeight: 6,
-                backgroundColor: scheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(colors.forStage(order.stage)),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween(end: order.packProgress),
+                duration: const Duration(milliseconds: 500),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, _) => LinearProgressIndicator(
+                  value: value,
+                  minHeight: 6,
+                  backgroundColor: scheme.surfaceContainerHighest,
+                  valueColor:
+                      AlwaysStoppedAnimation(colors.forStage(order.stage)),
+                ),
               ),
             ),
             const SizedBox(height: 6),

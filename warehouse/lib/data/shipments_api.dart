@@ -126,8 +126,7 @@ class ShipmentsApi {
     Map<String, String>? query,
     Map<String, Object?>? body,
   }) async {
-    final uri = Uri.parse('${_baseUrl()}$path')
-        .replace(queryParameters: query);
+    final uri = Uri.parse('${_baseUrl()}$path').replace(queryParameters: query);
     final token = _token();
     final headers = {
       'Accept': 'application/json',

@@ -80,7 +80,9 @@ class _StockScreenState extends State<StockScreen> {
               MaterialPageRoute(builder: (_) => const CountScreen()),
             ),
             icon: Icon(
-              stock.hasOpenCount ? Icons.checklist_rtl : Icons.checklist_outlined,
+              stock.hasOpenCount
+                  ? Icons.checklist_rtl
+                  : Icons.checklist_outlined,
             ),
             tooltip: 'Stock count',
           ),

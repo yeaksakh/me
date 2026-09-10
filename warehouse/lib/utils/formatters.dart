@@ -8,8 +8,18 @@ String clockTime(DateTime time) {
 }
 
 const _months = [
-  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
 ];
 
 String shortDate(DateTime date) => '${_months[date.month - 1]} ${date.day}';
@@ -24,8 +34,9 @@ String longDate(DateTime date) =>
     '${_weekdays[date.weekday - 1]}, ${shortDate(date)} ${date.year}';
 
 /// "Sep 10 – Sep 12", or one date when both are the same day.
-String dateRange(DateTime start, DateTime end) =>
-    isSameDay(start, end) ? shortDate(start) : '${shortDate(start)} – ${shortDate(end)}';
+String dateRange(DateTime start, DateTime end) => isSameDay(start, end)
+    ? shortDate(start)
+    : '${shortDate(start)} – ${shortDate(end)}';
 
 /// "3h 12m", "45m" -- time worked.
 String hoursMinutes(Duration duration) {
@@ -42,8 +53,18 @@ String monthLabel(String yearMonth) {
   final month = int.tryParse(parts[1]);
   if (month == null || month < 1 || month > 12) return yearMonth;
   const names = [
-    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
-    'September', 'October', 'November', 'December',
+    'January',
+    'February',
+    'March',
+    'April',
+    'May',
+    'June',
+    'July',
+    'August',
+    'September',
+    'October',
+    'November',
+    'December',
   ];
   return '${names[month - 1]} ${parts[0]}';
 }

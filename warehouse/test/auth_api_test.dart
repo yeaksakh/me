@@ -36,8 +36,8 @@ Map<String, dynamic> loginAnswer({
 AuthApi apiAnswering(http.Response Function(http.Request request) answer) =>
     AuthApi(httpClient: MockClient((request) async => answer(request)));
 
-Matcher throwsAuthMessage(Object message) => throwsA(
-    isA<AuthException>().having((e) => e.message, 'message', message));
+Matcher throwsAuthMessage(Object message) =>
+    throwsA(isA<AuthException>().having((e) => e.message, 'message', message));
 
 void main() {
   test('posts the username and password to /api/auth/login', () async {
@@ -65,9 +65,9 @@ void main() {
     final admin = await apiAnswering(
             (_) => http.Response(jsonEncode(loginAnswer(isAdmin: true)), 200))
         .signIn(username: 'a', password: 'b');
-    final staff = await apiAnswering(
-            (_) => http.Response(jsonEncode(loginAnswer()), 200))
-        .signIn(username: 'a', password: 'b');
+    final staff =
+        await apiAnswering((_) => http.Response(jsonEncode(loginAnswer()), 200))
+            .signIn(username: 'a', password: 'b');
 
     expect(admin.staff.role, StaffRole.supervisor);
     expect(staff.staff.role, StaffRole.packer);

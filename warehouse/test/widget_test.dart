@@ -264,7 +264,8 @@ void main() {
     await tester.tap(find.text('Mark audited'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('audited — waiting for the rider'), findsOneWidget);
+    expect(
+        find.textContaining('audited — waiting for the rider'), findsOneWidget);
     await openQueue(tester, 'Audited');
     expect(find.text('YK-1'), findsOneWidget);
   });
@@ -280,7 +281,8 @@ void main() {
     expect(find.text('Mark audited'), findsNothing);
   });
 
-  testWidgets('the record shows when it was accepted, packed and audited, '
+  testWidgets(
+      'the record shows when it was accepted, packed and audited, '
       'and when each photo went up', (tester) async {
     await signIn(tester, orders: [
       buildOrder(
@@ -413,9 +415,11 @@ void main() {
 
     testWidgets("a shift opened elsewhere shows as open, with since when",
         (tester) async {
-      await openHrm(tester, hrm: FakeHrmApi(shifts: [
-        buildShift(clockIn: DateTime.now().subtract(const Duration(hours: 2))),
-      ]));
+      await openHrm(tester,
+          hrm: FakeHrmApi(shifts: [
+            buildShift(
+                clockIn: DateTime.now().subtract(const Duration(hours: 2))),
+          ]));
 
       expect(find.text('Clocked in'), findsOneWidget);
       expect(find.textContaining('Since'), findsOneWidget);
@@ -439,13 +443,14 @@ void main() {
 
     testWidgets('attendance lists the shifts with their hours', (tester) async {
       final start = DateTime.now().subtract(const Duration(hours: 9));
-      await openHrm(tester, hrm: FakeHrmApi(shifts: [
-        buildShift(
-          clockIn: start,
-          clockOut: start.add(const Duration(hours: 8, minutes: 30)),
-          note: 'yard',
-        ),
-      ]));
+      await openHrm(tester,
+          hrm: FakeHrmApi(shifts: [
+            buildShift(
+              clockIn: start,
+              clockOut: start.add(const Duration(hours: 8, minutes: 30)),
+              note: 'yard',
+            ),
+          ]));
 
       await tester.tap(find.text('Attendance'));
       await tester.pumpAndSettle();
@@ -472,7 +477,8 @@ void main() {
       await tester.tap(find.text('Send request'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Leave requested — waiting for approval.'), findsOneWidget);
+      expect(
+          find.text('Leave requested — waiting for approval.'), findsOneWidget);
       expect(find.text('Pending'), findsOneWidget);
       expect(find.text('Fever'), findsOneWidget);
     });
@@ -511,12 +517,19 @@ void main() {
 
     testWidgets('holidays list the year, coming up first', (tester) async {
       final soon = DateTime.now().add(const Duration(days: 20));
-      await openHrm(tester, hrm: FakeHrmApi(holidays: [
-        Holiday(id: '1', name: 'Pchum Ben', start: soon,
-            end: soon.add(const Duration(days: 2))),
-        Holiday(id: '2', name: 'Khmer New Year', start: DateTime(2026, 4, 14),
-            end: DateTime(2026, 4, 16)),
-      ]));
+      await openHrm(tester,
+          hrm: FakeHrmApi(holidays: [
+            Holiday(
+                id: '1',
+                name: 'Pchum Ben',
+                start: soon,
+                end: soon.add(const Duration(days: 2))),
+            Holiday(
+                id: '2',
+                name: 'Khmer New Year',
+                start: DateTime(2026, 4, 14),
+                end: DateTime(2026, 4, 16)),
+          ]));
 
       await tester.tap(find.text('Holidays'));
       await tester.pumpAndSettle();
@@ -528,23 +541,39 @@ void main() {
     });
 
     testWidgets('payroll lists the months and opens a payslip', (tester) async {
-      await openHrm(tester, hrm: FakeHrmApi(
-        payrolls: [
-          const PayrollSummary(id: '331', month: '2026-08', netPay: 412.75,
-              basicSalary: 450, paidOn: null),
-        ],
-        payslips: {
-          '331': const Payslip(
-            id: '331', monthLabel: 'August 2026', netPay: 412.75,
-            basicSalary: 450, totalEarnings: 470, totalDeductions: 57.25,
-            lines: [
-              PayLine(label: 'Basic salary', amount: 450, kind: 'base'),
-              PayLine(label: 'Late', amount: 7.25, kind: 'minus', when: '3 days'),
+      await openHrm(tester,
+          hrm: FakeHrmApi(
+            payrolls: [
+              const PayrollSummary(
+                  id: '331',
+                  month: '2026-08',
+                  netPay: 412.75,
+                  basicSalary: 450,
+                  paidOn: null),
             ],
-            presentDays: 24, absentDays: 1, scheduledDays: 25, lateMinutes: 42,
-          ),
-        },
-      ));
+            payslips: {
+              '331': const Payslip(
+                id: '331',
+                monthLabel: 'August 2026',
+                netPay: 412.75,
+                basicSalary: 450,
+                totalEarnings: 470,
+                totalDeductions: 57.25,
+                lines: [
+                  PayLine(label: 'Basic salary', amount: 450, kind: 'base'),
+                  PayLine(
+                      label: 'Late',
+                      amount: 7.25,
+                      kind: 'minus',
+                      when: '3 days'),
+                ],
+                presentDays: 24,
+                absentDays: 1,
+                scheduledDays: 25,
+                lateMinutes: 42,
+              ),
+            },
+          ));
 
       await tester.tap(find.text('Payroll'));
       await tester.pumpAndSettle();
