@@ -4,4 +4,8 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- The hidden server picker (three taps on the sign-in logo) exists only
+         in debug and profile builds, and an on-site server on the shop's LAN
+         is usually plain http. Release builds stay https-only. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

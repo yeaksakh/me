@@ -1,327 +1,192 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:warehouse/models/fulfilment_stage.dart';
-import 'package:warehouse/models/order.dart';
+import 'package:warehouse/state/tasks_controller.dart';
 
 import 'fixtures.dart';
 
 void main() {
-  group('Queues', () {
-    test('a queue holds only orders at that stage', () async {
+  group('Tabs', () {
+    test('each tab holds only its own status, with the server count', () async {
       final tasks = await tasksWith([
         buildOrder(id: '1'),
-        buildOrder(id: '2', stage: FulfilmentStage.prepared),
-        buildOrder(id: '3', stage: FulfilmentStage.checked),
+        buildOrder(id: '2', stage: FulfilmentStage.packed),
+        buildOrder(id: '3', stage: FulfilmentStage.audited),
+        buildOrder(id: '4', stage: FulfilmentStage.audited),
       ]);
 
       expect(tasks.queue(FulfilmentStage.ordered).single.id, '1');
-      expect(tasks.queue(FulfilmentStage.prepared).single.id, '2');
-      expect(tasks.queue(FulfilmentStage.checked).single.id, '3');
+      expect(tasks.queue(FulfilmentStage.packed).single.id, '2');
+      expect(tasks.queueCount(FulfilmentStage.audited), 2);
+      expect(tasks.toPackCount, 1);
     });
 
-    test('a queue is oldest first, so the longest wait is worked next',
-        () async {
+    test('a tab is newest first, as the website lists shipments', () async {
       final tasks = await tasksWith([
-        buildOrder(id: 'new', placedAt: DateTime(2026, 1, 1, 11)),
         buildOrder(id: 'old', placedAt: DateTime(2026, 1, 1, 9)),
+        buildOrder(id: 'new', placedAt: DateTime(2026, 1, 1, 11)),
       ]);
 
       expect(
         tasks.queue(FulfilmentStage.ordered).map((o) => o.id).toList(),
-        ['old', 'new'],
+        ['new', 'old'],
       );
     });
 
-    test('open count spans the three warehouse queues but not the driver',
+    test('an expired session signs out instead of failing on every pull',
         () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1'),
-        buildOrder(id: '2', stage: FulfilmentStage.prepared),
-        buildOrder(id: '3', stage: FulfilmentStage.checked),
-        buildOrder(id: '4', stage: FulfilmentStage.pickedUp),
-        buildOrder(id: '5', stage: FulfilmentStage.delivered),
-      ]);
+      var signedOut = false;
+      final tasks = TasksController(
+        FakeShipmentsApi()..expired = true,
+        onUnauthorized: () => signedOut = true,
+      );
 
-      expect(tasks.openCount, 3);
-      expect(tasks.awaitingDriver, 1);
+      await tasks.refreshAll();
+
+      expect(signedOut, isTrue);
+      expect(tasks.error, contains('expired'));
+      expect(tasks.hasLoaded(FulfilmentStage.ordered), isFalse);
     });
   });
 
-  group('Advancing', () {
-    test('a fully picked order goes ordered -> prepared', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 2, picked: 2)]),
-      ]);
+  group('Accepting', () {
+    test('accepting makes it yours and keeps it in Ordered', () async {
+      final tasks = await tasksWith([buildOrder(id: '1')]);
 
-      expect(await tasks.advance('1', staff: packer), isTrue);
-      expect(tasks.orderById('1')!.stage, FulfilmentStage.prepared);
+      expect(await tasks.accept('1'), isTrue);
+      expect(tasks.orderById('1')!.isAcceptedBy(supervisor.id), isTrue);
+      expect(tasks.queue(FulfilmentStage.ordered).single.id, '1');
     });
 
-    test('preparing stamps preparedAt', () async {
+    test('one someone else holds is refused, naming them', () async {
       final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 1, picked: 1)]),
+        buildOrder(id: '1', preparedById: 'x9', preparedByName: 'Chan Vy'),
       ]);
 
-      await tasks.advance('1', staff: packer);
-      expect(tasks.orderById('1')!.preparedAt, isNotNull);
+      expect(await tasks.accept('1'), isFalse);
+      expect(tasks.error, contains('Chan Vy'));
+      expect(tasks.orderById('1')!.isAcceptedBy(supervisor.id), isFalse);
     });
 
-    test('a packer cannot sign off their own check', () async {
+    test('handing back works before packing, and not after', () async {
       final tasks = await tasksWith([
         buildOrder(
           id: '1',
-          stage: FulfilmentStage.prepared,
-          lines: [buildLine(quantity: 1, picked: 1)],
+          preparedById: supervisor.id,
+          lines: [buildLine(id: 'a'), buildLine(id: 'b')],
         ),
       ]);
 
-      expect(await tasks.advance('1', staff: packer), isFalse);
-      expect(tasks.orderById('1')!.stage, FulfilmentStage.prepared);
-      expect(tasks.error, contains('checker'));
-    });
+      await tasks.setLinePacked('1', 'a', packed: true);
+      expect(await tasks.release('1'), isFalse);
 
-    test('a checker can', () async {
-      final tasks = await tasksWith([
-        buildOrder(
-          id: '1',
-          stage: FulfilmentStage.prepared,
-          lines: [buildLine(quantity: 1, picked: 1)],
-        ),
-      ]);
-
-      expect(await tasks.advance('1', staff: checker), isTrue);
-      expect(tasks.orderById('1')!.stage, FulfilmentStage.checked);
-      expect(tasks.orderById('1')!.checkedAt, isNotNull);
-    });
-
-    test('a short pick is refused while nobody has said why', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 3, picked: 1)]),
-      ]);
-
-      expect(await tasks.advance('1', staff: packer), isFalse);
-      expect(tasks.error, contains('short'));
-      expect(tasks.orderById('1')!.stage, FulfilmentStage.ordered);
-    });
-
-    test('a short pick with a note is allowed through', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 3, picked: 1)]),
-      ]);
-
-      await tasks.setNote('1', 'Shelf was empty, two owed.');
-      expect(await tasks.advance('1', staff: packer), isTrue);
-      expect(tasks.orderById('1')!.stage, FulfilmentStage.prepared);
-    });
-
-    test('a whitespace-only note does not count as an explanation', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 3, picked: 1)]),
-      ]);
-
-      await tasks.setNote('1', '   ');
-      expect(await tasks.advance('1', staff: packer), isFalse);
-    });
-
-    test('staff cannot hand an order to the driver on the driver\'s behalf',
-        () async {
-      final tasks = await tasksWith([
-        buildOrder(
-          id: '1',
-          stage: FulfilmentStage.checked,
-          lines: [buildLine(quantity: 1, picked: 1)],
-        ),
-      ]);
-
-      expect(await tasks.advance('1', staff: checker), isFalse);
-      expect(tasks.orderById('1')!.stage, FulfilmentStage.checked);
-      expect(tasks.error, contains('driver'));
-    });
-
-    test('an order already gone cannot be advanced', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', stage: FulfilmentStage.delivered),
-      ]);
-
-      expect(await tasks.advance('1', staff: checker), isFalse);
+      await tasks.setLinePacked('1', 'a', packed: false);
+      expect(await tasks.release('1'), isTrue);
+      expect(tasks.orderById('1')!.isAccepted, isFalse);
     });
   });
 
-  group('Sending back', () {
-    test('a checker can return a prepared order to packing', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', stage: FulfilmentStage.prepared),
-      ]);
+  group('Packing', () {
+    test('an item cannot be ticked before the shipment is accepted', () async {
+      final tasks = await tasksWith([buildOrder(id: '1')]);
 
-      expect(await tasks.sendBack('1', staff: checker), isTrue);
-      expect(tasks.orderById('1')!.stage, FulfilmentStage.ordered);
+      expect(await tasks.setLinePacked('1', 'ln-1', packed: true), isFalse);
+      expect(tasks.error, contains('Accept'));
     });
 
-    test('a packer cannot', () async {
+    test('nor on a shipment someone else is packing', () async {
       final tasks = await tasksWith([
-        buildOrder(id: '1', stage: FulfilmentStage.prepared),
+        buildOrder(id: '1', preparedById: 'x9', preparedByName: 'Chan Vy'),
       ]);
 
-      expect(await tasks.sendBack('1', staff: packer), isFalse);
+      expect(await tasks.setLinePacked('1', 'ln-1', packed: true), isFalse);
+      expect(tasks.error, contains('Someone else'));
     });
 
-    test('only an order waiting to be checked can go back', () async {
+    test('Packed waits for every item, then moves the shipment on', () async {
       final tasks = await tasksWith([
-        buildOrder(id: '1', stage: FulfilmentStage.checked),
+        buildOrder(
+          id: '1',
+          preparedById: supervisor.id,
+          lines: [buildLine(id: 'a'), buildLine(id: 'b')],
+        ),
       ]);
 
-      expect(await tasks.sendBack('1', staff: checker), isFalse);
+      await tasks.setLinePacked('1', 'a', packed: true);
+      expect(tasks.orderById('1')!.packedCount, 1);
+      expect(await tasks.markPacked('1'), isFalse);
+      expect(tasks.error, contains('1 left'));
+
+      await tasks.setLinePacked('1', 'b', packed: true);
+      expect(await tasks.markPacked('1'), isTrue);
+      expect(tasks.orderById('1')!.stage, FulfilmentStage.packed);
+      expect(tasks.queue(FulfilmentStage.ordered), isEmpty);
+      expect(tasks.queueCount(FulfilmentStage.packed), 1);
     });
-  });
 
-  group('Picking', () {
-    test('picked is clamped to the ordered quantity', () async {
+    test('a scan ticks the item with that SKU', () async {
       final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 2)]),
+        buildOrder(id: '1', preparedById: supervisor.id),
       ]);
 
-      await tasks.setLinePicked('1', 'ln-1', 99);
-      expect(tasks.orderById('1')!.lines.single.picked, 2);
+      final line = await tasks.applyScan('1', 'sku-1');
 
-      await tasks.setLinePicked('1', 'ln-1', -5);
-      expect(tasks.orderById('1')!.lines.single.picked, 0);
-    });
-
-    test('a scan adds one to the matching line', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 3)]),
-      ]);
-
-      final line = await tasks.applyScan('1', 'BC-1');
       expect(line, isNotNull);
-      expect(tasks.orderById('1')!.lines.single.picked, 1);
+      expect(tasks.orderById('1')!.lines.single.packed, isTrue);
     });
 
-    test('a scan matches the SKU too, for shops without barcodes', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(barcode: null, quantity: 2)]),
-      ]);
-
-      await tasks.applyScan('1', 'sku-1');
-      expect(tasks.orderById('1')!.lines.single.picked, 1);
-    });
-
-    test('a code from another order is reported, not silently ignored',
+    test('a code from another shipment is reported, not silently ignored',
         () async {
       final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 1)]),
+        buildOrder(id: '1', preparedById: supervisor.id),
       ]);
 
-      expect(await tasks.applyScan('1', 'BC-NOPE'), isNull);
-      expect(tasks.orderById('1')!.lines.single.picked, 0);
+      expect(await tasks.applyScan('1', 'NOPE'), isNull);
+      expect(tasks.orderById('1')!.lines.single.packed, isFalse);
     });
 
-    test('scanning a finished line does not overfill it', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 1, picked: 1)]),
-      ]);
-
-      final line = await tasks.applyScan('1', 'BC-1');
-      expect(line, isNotNull);
-      expect(tasks.orderById('1')!.lines.single.picked, 1);
-    });
-
-    test('a repeated scan fills the second unit of the same line', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 2)]),
-      ]);
-
-      await tasks.applyScan('1', 'BC-1');
-      await tasks.applyScan('1', 'BC-1');
-      expect(tasks.orderById('1')!.lines.single.picked, 2);
-      expect(tasks.orderById('1')!.isFullyPicked, isTrue);
-    });
-
-    test('a scan prefers an unfinished line over a finished duplicate',
+    test('a scan prefers an unticked item over a ticked one with the same SKU',
         () async {
       final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [
-          buildLine(id: 'a', quantity: 1, picked: 1),
-          buildLine(id: 'b', quantity: 2),
+        buildOrder(id: '1', preparedById: supervisor.id, lines: [
+          buildLine(id: 'a', packed: true),
+          buildLine(id: 'b'),
         ]),
       ]);
 
-      final line = await tasks.applyScan('1', 'BC-1');
+      final line = await tasks.applyScan('1', 'SKU-1');
+
       expect(line!.id, 'b');
-    });
-
-    test('ticking a line complete fills it, unticking empties it', () async {
-      final tasks = await tasksWith([
-        buildOrder(id: '1', lines: [buildLine(quantity: 4)]),
-      ]);
-
-      await tasks.setLineComplete('1', 'ln-1', complete: true);
-      expect(tasks.orderById('1')!.lines.single.picked, 4);
-
-      await tasks.setLineComplete('1', 'ln-1', complete: false);
-      expect(tasks.orderById('1')!.lines.single.picked, 0);
+      expect(tasks.orderById('1')!.isFullyPacked, isTrue);
     });
   });
 
-  group('Day figures', () {
-    test('today counts only what was stamped today', () async {
-      final now = DateTime.now();
+  group('Auditing', () {
+    test('a packer cannot mark a shipment audited', () async {
       final tasks = await tasksWith([
-        buildOrder(
-          id: '1',
-          stage: FulfilmentStage.checked,
-          preparedAt: now,
-          checkedAt: now,
-        ),
-        buildOrder(
-          id: '2',
-          stage: FulfilmentStage.delivered,
-          preparedAt: now.subtract(const Duration(days: 2)),
-          checkedAt: now.subtract(const Duration(days: 2)),
-        ),
+        buildOrder(id: '1', stage: FulfilmentStage.packed),
+      ], staff: packer);
+
+      expect(await tasks.markAudited('1', staff: packer), isFalse);
+      expect(tasks.orderById('1')!.stage, FulfilmentStage.packed);
+    });
+
+    test('a supervisor can', () async {
+      final tasks = await tasksWith([
+        buildOrder(id: '1', stage: FulfilmentStage.packed),
       ]);
 
-      expect(tasks.checkedToday, 1);
-      expect(tasks.preparedToday, 1);
+      expect(await tasks.markAudited('1', staff: supervisor), isTrue);
+      expect(tasks.orderById('1')!.stage, FulfilmentStage.audited);
+      expect(tasks.queueCount(FulfilmentStage.audited), 1);
     });
-  });
 
-  group('Order maths', () {
-    test('progress is by units, not lines', () {
-      final order = buildOrder(id: '1', lines: [
-        buildLine(id: 'a', quantity: 1, picked: 1),
-        buildLine(id: 'b', quantity: 3),
+    test('the app never moves a shipment past Audited', () async {
+      final tasks = await tasksWith([
+        buildOrder(id: '1', stage: FulfilmentStage.audited),
       ]);
 
-      expect(order.unitCount, 4);
-      expect(order.pickedCount, 1);
-      expect(order.pickProgress, 0.25);
-      expect(order.hasShortage, isTrue);
-    });
-
-    test('cash on delivery is the unpaid orders', () {
-      expect(
-        buildOrder(id: '1', payment: PaymentStatus.unpaid).isCashOnDelivery,
-        isTrue,
-      );
-      expect(
-        buildOrder(id: '2', payment: PaymentStatus.paid).isCashOnDelivery,
-        isFalse,
-      );
-    });
-
-    test('an order survives a JSON round trip, part-picked and all', () {
-      final order = buildOrder(
-        id: '1',
-        stage: FulfilmentStage.prepared,
-        staffNote: 'One short',
-        lines: [buildLine(quantity: 3, picked: 2)],
-      );
-
-      final restored = Order.fromJson(order.toJson());
-      expect(restored.stage, FulfilmentStage.prepared);
-      expect(restored.lines.single.picked, 2);
-      expect(restored.staffNote, 'One short');
-      expect(restored.hasShortage, isTrue);
+      expect(await tasks.markAudited('1', staff: supervisor), isFalse);
+      expect(tasks.orderById('1')!.stage, FulfilmentStage.audited);
     });
   });
 }

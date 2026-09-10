@@ -8,12 +8,27 @@ import '../state/tasks_controller.dart';
 import '../theme/app_theme.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/order_task_card.dart';
-import '../widgets/stat_tile.dart';
 import 'order_detail_screen.dart';
 
-/// The floor's three queues, one tab each, in the order work moves through them.
-class TasksScreen extends StatelessWidget {
+/// The shipments, one tab per status, as the website's /shipments page filters
+/// them: Ordered, Packed, Audited.
+class TasksScreen extends StatefulWidget {
   const TasksScreen({super.key});
+
+  @override
+  State<TasksScreen> createState() => _TasksScreenState();
+}
+
+class _TasksScreenState extends State<TasksScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // After the first frame: loading notifies listeners, and doing that while
+    // this widget is still building is an error.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<TasksController>().refreshAll();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +48,7 @@ class TasksScreen extends StatelessWidget {
                 'Orders',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
-              if (staff != null)
+              if (staff != null && staff.warehouseName.isNotEmpty)
                 Text(
                   staff.warehouseName,
                   style: TextStyle(
@@ -54,7 +69,7 @@ class TasksScreen extends StatelessWidget {
                       // the label yields before it can overflow the tab.
                       Flexible(
                         child: Text(
-                          stage.queueLabel,
+                          stage.label,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -114,9 +129,12 @@ class _Queue extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tasks = context.watch<TasksController>();
+    final staffId = context.select<SessionController, String?>(
+      (session) => session.staff?.id,
+    );
     final orders = tasks.queue(stage);
 
-    if (tasks.loading && tasks.all.isEmpty) {
+    if (!tasks.hasLoaded(stage) && tasks.error == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -126,7 +144,7 @@ class _Queue extends StatelessWidget {
         // far side of one runs against a context that may already be gone.
         final tasksController = context.read<TasksController>();
         final stockController = context.read<StockController>();
-        await tasksController.load();
+        await tasksController.refreshAll();
         await stockController.load();
       },
       child: orders.isEmpty
@@ -139,11 +157,16 @@ class _Queue extends StatelessWidget {
                   height: MediaQuery.sizeOf(context).height * 0.6,
                   child: Builder(
                     builder: (context) {
+                      // A tab that never loaded is a failure to say out loud,
+                      // not an empty queue: "Nothing to pack" would be a lie.
+                      final failed = !tasks.hasLoaded(stage);
                       final copy = emptyQueueCopy(stage);
                       return EmptyState(
-                        icon: copy.icon,
-                        title: copy.title,
-                        message: copy.message,
+                        icon: failed ? Icons.cloud_off : copy.icon,
+                        title: failed ? 'Could not load shipments' : copy.title,
+                        message: failed
+                            ? '${tasks.error ?? ''}\nPull down to try again.'
+                            : copy.message,
                       );
                     },
                   ),
@@ -153,13 +176,13 @@ class _Queue extends StatelessWidget {
           : ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              itemCount: orders.length + 1,
+              itemCount: orders.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                if (index == 0) return _Summary(stage: stage);
-                final order = orders[index - 1];
+                final order = orders[index];
                 return OrderTaskCard(
                   order: order,
+                  staffId: staffId,
                   onTap: () => Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => OrderDetailScreen(orderId: order.id),
@@ -168,52 +191,6 @@ class _Queue extends StatelessWidget {
                 );
               },
             ),
-    );
-  }
-}
-
-/// The three numbers worth knowing at a glance, above the queue.
-class _Summary extends StatelessWidget {
-  const _Summary({required this.stage});
-
-  final FulfilmentStage stage;
-
-  @override
-  Widget build(BuildContext context) {
-    final tasks = context.watch<TasksController>();
-    final colors = context.appColors;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: StatTile(
-              icon: Icons.inbox,
-              label: 'In the building',
-              value: '${tasks.openCount}',
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: StatTile(
-              icon: Icons.fact_check,
-              label: 'Checked today',
-              value: '${tasks.checkedToday}',
-              tone: colors.checked,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: StatTile(
-              icon: Icons.local_shipping,
-              label: 'Awaiting driver',
-              value: '${tasks.awaitingDriver}',
-              tone: colors.pickedUp,
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

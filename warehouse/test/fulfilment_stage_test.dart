@@ -3,28 +3,35 @@ import 'package:warehouse/models/fulfilment_stage.dart';
 
 void main() {
   group('Wire values', () {
-    // The one that bites: the Dart name and the API value differ, and a
-    // `stage.name` slipping into a request body would silently filter nothing.
-    test('pickedUp goes on the wire as picked_up', () {
-      expect(FulfilmentStage.pickedUp.apiValue, 'picked_up');
-      expect(FulfilmentStage.pickedUp.name, 'pickedUp');
+    // The one that bites: the ERP stores "picked up" as `shipped`, and a
+    // `stage.name` slipping into a request would ask for a status that does not
+    // exist.
+    test('picked up travels as shipped, the ERP value', () {
+      expect(FulfilmentStage.pickedUp.apiValue, 'shipped');
+      expect(FulfilmentStage.pickedUp.label, 'Picked up');
     });
 
-    test('the five timeline stages match the backend STAGES list', () {
+    test("the timeline is the website's shipment flow", () {
       expect(
         kStageTimeline.map((stage) => stage.apiValue).toList(),
-        ['ordered', 'prepared', 'checked', 'picked_up', 'delivered'],
+        ['ordered', 'packed', 'audited', 'shipped', 'delivered'],
       );
     });
 
-    test('every stage round-trips through the wire value', () {
+    test('every status round-trips through its wire value', () {
       for (final stage in FulfilmentStage.values) {
         expect(stageFromApi(stage.apiValue), stage);
       }
     });
 
-    test('an unknown wire value falls back instead of throwing', () {
+    test('capitalised strays from an older screen still read', () {
+      expect(stageFromApi('Packed'), FulfilmentStage.packed);
+      expect(stageFromApiOrNull(' Ordered '), FulfilmentStage.ordered);
+    });
+
+    test('an unknown value falls back instead of throwing', () {
       expect(stageFromApi('teleported'), FulfilmentStage.ordered);
+      expect(stageFromApiOrNull(null), isNull);
       expect(
         stageFromApi(null, fallback: FulfilmentStage.cancelled),
         FulfilmentStage.cancelled,
@@ -33,29 +40,24 @@ void main() {
   });
 
   group('Staff boundary', () {
-    test('staff can advance ordered and prepared, and nothing else', () {
-      expect(FulfilmentStage.ordered.nextForStaff, FulfilmentStage.prepared);
-      expect(FulfilmentStage.prepared.nextForStaff, FulfilmentStage.checked);
-      expect(FulfilmentStage.checked.nextForStaff, isNull);
+    test('staff move ordered to packed and packed to audited, and nothing else',
+        () {
+      expect(FulfilmentStage.ordered.nextForStaff, FulfilmentStage.packed);
+      expect(FulfilmentStage.packed.nextForStaff, FulfilmentStage.audited);
+      expect(FulfilmentStage.audited.nextForStaff, isNull);
       expect(FulfilmentStage.pickedUp.nextForStaff, isNull);
       expect(FulfilmentStage.delivered.nextForStaff, isNull);
     });
 
-    test('the full pipeline still runs past the warehouse', () {
-      expect(FulfilmentStage.checked.next, FulfilmentStage.pickedUp);
+    test('the flow still runs on with the rider', () {
+      expect(FulfilmentStage.audited.next, FulfilmentStage.pickedUp);
       expect(FulfilmentStage.pickedUp.next, FulfilmentStage.delivered);
       expect(FulfilmentStage.delivered.next, isNull);
     });
-
-    test('only prepared and checked are the warehouse to reach', () {
-      expect(FulfilmentStage.prepared.isStaffOwned, isTrue);
-      expect(FulfilmentStage.checked.isStaffOwned, isTrue);
-      expect(FulfilmentStage.pickedUp.isStaffOwned, isFalse);
-    });
   });
 
-  group('Queues', () {
-    test('the three warehouse queues are the open stages', () {
+  group('Tabs', () {
+    test('the three tabs are the statuses still in the building', () {
       expect(kStaffQueues.every((stage) => stage.isOpen), isTrue);
       expect(FulfilmentStage.pickedUp.isOpen, isFalse);
       expect(FulfilmentStage.delivered.isClosed, isTrue);

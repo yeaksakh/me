@@ -40,7 +40,7 @@ class Staff {
     required this.name,
     required this.role,
     required this.warehouseName,
-    this.staffCode,
+    this.username,
   });
 
   final String id;
@@ -51,8 +51,8 @@ class Staff {
   /// multi-warehouse shop will eventually have someone in the wrong one.
   final String warehouseName;
 
-  /// The number on their badge, if the shop issues them.
-  final String? staffCode;
+  /// The yeaksa.com username they signed in with.
+  final String? username;
 
   String get initials {
     final parts = name.trim().split(RegExp(r'\s+'))
@@ -67,7 +67,7 @@ class Staff {
         'name': name,
         'role': role.apiValue,
         'warehouseName': warehouseName,
-        'staffCode': staffCode,
+        'username': username,
       };
 
   factory Staff.fromJson(Map<String, dynamic> json) => Staff(
@@ -75,6 +75,6 @@ class Staff {
         name: json['name'] as String,
         role: staffRoleFromApi(json['role']),
         warehouseName: json['warehouseName'] as String,
-        staffCode: json['staffCode'] as String?,
+        username: json['username'] as String?,
       );
 }

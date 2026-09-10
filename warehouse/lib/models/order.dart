@@ -1,159 +1,220 @@
 import 'fulfilment_stage.dart';
 
-/// Whether the money is already in. Mirrors the backend's `payment_status`.
+/// Whether the money is in. Mirrors the ERP's `payment_status`.
 ///
-/// It matters on the floor: an unpaid order is cash on delivery, and the packer
-/// needs to know before it leaves that the rider has to collect at the door.
-enum PaymentStatus { paid, unpaid }
+/// Anything short of `paid` means money changes hands at the door, so the invoice
+/// goes in the box and the rider knows to collect.
+enum PaymentStatus { paid, partial, due }
 
 extension PaymentStatusX on PaymentStatus {
-  String get apiValue => this == PaymentStatus.paid ? 'paid' : 'unpaid';
-  String get label =>
-      this == PaymentStatus.paid ? 'Paid online' : 'Cash on delivery';
-  String get shortLabel => this == PaymentStatus.paid ? 'Paid' : 'COD';
+  String get label => switch (this) {
+        PaymentStatus.paid => 'Paid',
+        PaymentStatus.partial => 'Part paid — collect the rest',
+        PaymentStatus.due => 'Not paid — collect on delivery',
+      };
 }
 
 PaymentStatus paymentStatusFromApi(Object? value) =>
-    value == 'paid' ? PaymentStatus.paid : PaymentStatus.unpaid;
+    switch ('$value'.trim().toLowerCase()) {
+      'paid' => PaymentStatus.paid,
+      'partial' => PaymentStatus.partial,
+      _ => PaymentStatus.due,
+    };
 
-/// One product line on an order, and how much of it is in the box so far.
-///
-/// [picked] is the packer's running tally, kept per line rather than as a single
-/// "done" flag so a part-picked order survives a restart with its progress --
-/// the common case being a line that is short and needs a supervisor.
-class OrderLine {
-  OrderLine({
-    required this.id,
-    required this.sku,
-    required this.name,
-    required this.quantity,
-    this.variant,
-    this.barcode,
-    this.location,
-    int picked = 0,
-  }) : picked = picked.clamp(0, quantity);
+/// A staff member as a shipment names them: who accepted it, who packed an item.
+class StaffRef {
+  const StaffRef({required this.id, required this.name});
 
+  /// The yeaksa.com user id, as text -- the same form `Staff.id` takes.
   final String id;
-  final String sku;
   final String name;
 
-  /// How many the customer ordered.
-  final int quantity;
-
-  /// e.g. "Red / XL". Null on a product without variants.
-  final String? variant;
-
-  /// What the scanner reads. Null until the backend carries barcodes -- the
-  /// line is still pickable by hand, it just cannot be scanned.
-  final String? barcode;
-
-  /// Where to walk to, e.g. "A-12-3". Null when the shop does not bin its stock.
-  final String? location;
-
-  /// How many are in the box. Never above [quantity].
-  int picked;
-
-  bool get isComplete => picked >= quantity;
-  bool get isUntouched => picked == 0;
-
-  /// Short of what was ordered, but not empty -- the state a packer has to
-  /// resolve before the order can move on.
-  bool get isShort => picked > 0 && picked < quantity;
-
-  int get remaining => quantity - picked;
-
-  String get displayName => variant == null ? name : '$name  ·  $variant';
-
-  /// True when [code] identifies this line. Falls back to the SKU so a shop
-  /// that prints SKUs rather than barcodes still scans.
-  bool matchesCode(String code) {
-    final needle = code.trim().toUpperCase();
-    if (needle.isEmpty) return false;
-    return barcode?.toUpperCase() == needle || sku.toUpperCase() == needle;
+  static StaffRef? fromApi(Object? json) {
+    if (json is! Map<String, dynamic> || json['id'] == null) return null;
+    return StaffRef(id: '${json['id']}', name: _text(json['name']) ?? '');
   }
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'sku': sku,
-        'name': name,
-        'quantity': quantity,
-        'variant': variant,
-        'barcode': barcode,
-        'location': location,
-        'picked': picked,
-      };
-
-  factory OrderLine.fromJson(Map<String, dynamic> json) => OrderLine(
-        id: json['id'] as String,
-        sku: json['sku'] as String,
-        name: json['name'] as String,
-        quantity: json['quantity'] as int,
-        variant: json['variant'] as String?,
-        barcode: json['barcode'] as String?,
-        location: json['location'] as String?,
-        picked: json['picked'] as int? ?? 0,
-      );
 }
 
-/// An order as the warehouse sees it: what to pick, where it is going, and
-/// which stage of `core/api/shop/orders.py::STAGES` it currently sits at.
-class Order {
-  Order({
+/// A photo filed against a shipment, and the status it is evidence for.
+class OrderPhoto {
+  const OrderPhoto({required this.url, this.stage});
+
+  final String url;
+  final FulfilmentStage? stage;
+}
+
+/// One item on a shipment, and whether it is in the box.
+///
+/// Packed is a tick per item, not a count, because that is what the website
+/// records (`transaction_sell_lines.packed_by`) and what its Packed button waits on.
+class OrderLine {
+  const OrderLine({
     required this.id,
-    required this.code,
-    required this.customerName,
-    required this.shippingAddress,
-    required this.lines,
-    required this.placedAt,
-    required this.paymentStatus,
-    this.customerPhone,
-    this.stage = FulfilmentStage.ordered,
-    this.preparedAt,
-    this.checkedAt,
-    this.staffNote,
+    required this.name,
+    required this.quantity,
+    this.sku = '',
+    this.variant,
+    this.parentId,
+    this.imageUrl,
+    this.location,
+    this.packed = false,
+    this.packedBy,
+    this.packedAt,
   });
 
   final String id;
 
-  /// The human reference, e.g. "YK-20419" -- what is written on the box.
-  final String code;
-  final String customerName;
-  final String? customerPhone;
-  final String shippingAddress;
-  final List<OrderLine> lines;
-  final DateTime placedAt;
-  final PaymentStatus paymentStatus;
+  /// Set on the items inside a bundle: the line of the bundle they belong to.
+  final String? parentId;
 
-  FulfilmentStage stage;
-  DateTime? preparedAt;
-  DateTime? checkedAt;
+  final String name;
 
-  /// Anything the packer had to say -- a short pick, a damaged item, a
-  /// substitution. Travels with the order so the checker sees it.
-  String? staffNote;
+  /// e.g. "700 ml". Null on a product without variations.
+  final String? variant;
 
-  /// Units ordered, not lines.
-  int get unitCount => lines.fold(0, (sum, line) => sum + line.quantity);
+  final String sku;
 
-  int get pickedCount => lines.fold(0, (sum, line) => sum + line.picked);
+  /// The ERP sells by weight and length as well as by the piece, so this is not
+  /// always whole.
+  final double quantity;
 
-  int get lineCount => lines.length;
+  final String? imageUrl;
 
-  /// Every line has its full quantity in the box.
-  bool get isFullyPicked => lines.every((line) => line.isComplete);
+  /// Rack-row-position at this branch, e.g. "A-01-2". Null when it is not binned.
+  final String? location;
 
-  /// At least one line came up short. The order can still go, but not silently.
-  bool get hasShortage => lines.any((line) => !line.isComplete);
+  final bool packed;
+  final StaffRef? packedBy;
+  final DateTime? packedAt;
 
-  /// 0..1, by units rather than lines, so a big line counts for more.
-  double get pickProgress {
-    final total = unitCount;
-    if (total == 0) return 1;
-    return pickedCount / total;
+  bool get isBundleItem => parentId != null;
+
+  String get displayName => variant == null ? name : '$name  ·  $variant';
+
+  /// Whole quantities without a decimal point, which is how they are counted.
+  String get quantityLabel => quantity == quantity.truncateToDouble()
+      ? '${quantity.toInt()}'
+      : '$quantity';
+
+  /// True when a scanned [code] is this item's SKU.
+  bool matchesCode(String code) {
+    final needle = code.trim().toUpperCase();
+    return needle.isNotEmpty && sku.toUpperCase() == needle;
   }
 
-  /// Cash orders need the rider to collect; prepaid ones do not.
-  bool get isCashOnDelivery => paymentStatus == PaymentStatus.unpaid;
+  OrderLine copyWith({
+    bool? packed,
+    StaffRef? packedBy,
+    bool clearPackedBy = false,
+  }) =>
+      OrderLine(
+        id: id,
+        parentId: parentId,
+        name: name,
+        variant: variant,
+        sku: sku,
+        quantity: quantity,
+        imageUrl: imageUrl,
+        location: location,
+        packed: packed ?? this.packed,
+        packedBy: clearPackedBy ? null : (packedBy ?? this.packedBy),
+        packedAt: packedAt,
+      );
+
+  factory OrderLine.fromApi(Map<String, dynamic> json) {
+    final place = [json['rack'], json['row'], json['position']]
+        .map(_text)
+        .whereType<String>()
+        .join('-');
+    return OrderLine(
+      id: '${json['id']}',
+      parentId: json['parent_id'] == null ? null : '${json['parent_id']}',
+      name: _text(json['product']) ?? 'Item',
+      variant: _text(json['variation']),
+      sku: _text(json['sku']) ?? '',
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
+      imageUrl: _text(json['image']),
+      location: place.isEmpty ? null : place,
+      packed: json['packed'] == true,
+      packedBy: StaffRef.fromApi(json['packed_by']),
+      packedAt: _date(json['packed_at']),
+    );
+  }
+}
+
+/// A shipment as the warehouse sees it: where it is in the flow, who has it, and
+/// -- once opened -- every item to put in the box.
+class Order {
+  const Order({
+    required this.id,
+    required this.code,
+    required this.customerName,
+    required this.placedAt,
+    this.stage = FulfilmentStage.ordered,
+    this.customerPhone = '',
+    this.shippingAddress = '',
+    this.locationName = '',
+    this.paymentStatus = PaymentStatus.paid,
+    this.amountDue = 0,
+    this.note = '',
+    this.preparedBy,
+    this.lineCount = 0,
+    this.packedCount = 0,
+    this.totalQuantity = 0,
+    this.lines = const [],
+    this.photos = const [],
+    this.hasDetail = false,
+  });
+
+  final String id;
+
+  /// The invoice number -- what is written on the box.
+  final String code;
+  final String customerName;
+
+  /// Empty while the shipment is `ordered`: the server withholds the phone and
+  /// address from packers, as the website does.
+  final String customerPhone;
+  final String shippingAddress;
+
+  /// The branch the sale belongs to.
+  final String locationName;
+
+  final DateTime placedAt;
+  final FulfilmentStage stage;
+  final PaymentStatus paymentStatus;
+  final double amountDue;
+
+  /// The sale's own note, from whoever rang it up.
+  final String note;
+
+  /// Who accepted it to pack -- the website's "Will be prepared".
+  final StaffRef? preparedBy;
+
+  final int lineCount;
+  final int packedCount;
+  final double totalQuantity;
+
+  /// Empty on a list row; filled once the shipment is opened.
+  final List<OrderLine> lines;
+  final List<OrderPhoto> photos;
+
+  /// True when [lines] and [photos] were loaded, rather than simply empty.
+  final bool hasDetail;
+
+  bool get isCashOnDelivery => paymentStatus != PaymentStatus.paid;
+
+  bool get isAccepted => preparedBy != null;
+
+  bool isAcceptedBy(String? staffId) =>
+      staffId != null && preparedBy?.id == staffId;
+
+  /// Every item ticked -- what Packed waits on.
+  bool get isFullyPacked => lineCount > 0 && packedCount >= lineCount;
+
+  int get unpackedCount => (lineCount - packedCount).clamp(0, lineCount);
+
+  double get packProgress => lineCount == 0 ? 0 : packedCount / lineCount;
 
   OrderLine? lineById(String lineId) {
     for (final line in lines) {
@@ -162,53 +223,102 @@ class Order {
     return null;
   }
 
-  /// The first unfinished line matching a scanned code.
-  ///
-  /// Prefers an incomplete line so scanning the same barcode twice fills the
-  /// second unit rather than bouncing off a line that is already done.
+  /// The item a scanned code belongs to, preferring one not yet ticked, so the
+  /// same SKU on two lines fills the second rather than bouncing off the first.
   OrderLine? lineForCode(String code) {
     OrderLine? fallback;
     for (final line in lines) {
       if (!line.matchesCode(code)) continue;
-      if (!line.isComplete) return line;
+      if (!line.packed) return line;
       fallback ??= line;
     }
     return fallback;
   }
 
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'code': code,
-        'customerName': customerName,
-        'customerPhone': customerPhone,
-        'shippingAddress': shippingAddress,
-        'lines': lines.map((line) => line.toJson()).toList(),
-        'placedAt': placedAt.toIso8601String(),
-        'paymentStatus': paymentStatus.apiValue,
-        'stage': stage.apiValue,
-        'preparedAt': preparedAt?.toIso8601String(),
-        'checkedAt': checkedAt?.toIso8601String(),
-        'staffNote': staffNote,
-      };
+  Order copyWith({
+    FulfilmentStage? stage,
+    StaffRef? preparedBy,
+    bool clearPreparedBy = false,
+    List<OrderLine>? lines,
+  }) {
+    final nextLines = lines ?? this.lines;
+    return Order(
+      id: id,
+      code: code,
+      customerName: customerName,
+      placedAt: placedAt,
+      stage: stage ?? this.stage,
+      customerPhone: customerPhone,
+      shippingAddress: shippingAddress,
+      locationName: locationName,
+      paymentStatus: paymentStatus,
+      amountDue: amountDue,
+      note: note,
+      preparedBy: clearPreparedBy ? null : (preparedBy ?? this.preparedBy),
+      lineCount: lines == null ? lineCount : nextLines.length,
+      packedCount: lines == null
+          ? packedCount
+          : nextLines.where((line) => line.packed).length,
+      totalQuantity: totalQuantity,
+      lines: nextLines,
+      photos: photos,
+      hasDetail: hasDetail,
+    );
+  }
 
-  factory Order.fromJson(Map<String, dynamic> json) => Order(
-        id: json['id'] as String,
-        code: json['code'] as String,
-        customerName: json['customerName'] as String,
-        customerPhone: json['customerPhone'] as String?,
-        shippingAddress: json['shippingAddress'] as String,
-        lines: (json['lines'] as List<dynamic>)
-            .map((line) => OrderLine.fromJson(line as Map<String, dynamic>))
-            .toList(),
-        placedAt: DateTime.parse(json['placedAt'] as String),
-        paymentStatus: paymentStatusFromApi(json['paymentStatus']),
-        stage: stageFromApi(json['stage']),
-        preparedAt: json['preparedAt'] == null
-            ? null
-            : DateTime.parse(json['preparedAt'] as String),
-        checkedAt: json['checkedAt'] == null
-            ? null
-            : DateTime.parse(json['checkedAt'] as String),
-        staffNote: json['staffNote'] as String?,
-      );
+  /// One shipment as `core/api/views_shipments.py` sends it -- a list row, or a
+  /// detail when it carries `items`.
+  factory Order.fromApi(Map<String, dynamic> json) {
+    final items = json['items'];
+    final photos = json['photos'];
+    final location = json['location'];
+    return Order(
+      id: '${json['id']}',
+      // Some ERP rows carry no invoice number; the id is what staff would quote.
+      code: _text(json['invoice_no']) ?? '#${json['id']}',
+      customerName:
+          _text(json['customer']) ?? _text(json['customer_name']) ?? 'Customer',
+      customerPhone: _text(json['customer_phone']) ?? '',
+      shippingAddress: _text(json['address']) ?? '',
+      locationName:
+          location is Map<String, dynamic> ? (_text(location['name']) ?? '') : '',
+      placedAt: _date(json['ordered_at']) ?? DateTime.now(),
+      stage: stageFromApi(json['shipping_status']),
+      paymentStatus: paymentStatusFromApi(json['payment_status']),
+      amountDue: (json['due'] as num?)?.toDouble() ?? 0,
+      note: _text(json['note']) ?? '',
+      preparedBy: StaffRef.fromApi(json['prepared_by']),
+      lineCount: (json['line_count'] as num?)?.toInt() ?? 0,
+      packedCount: (json['packed_count'] as num?)?.toInt() ?? 0,
+      totalQuantity: (json['total_quantity'] as num?)?.toDouble() ?? 0,
+      lines: items is List
+          ? items
+              .whereType<Map<String, dynamic>>()
+              .map(OrderLine.fromApi)
+              .toList()
+          : const [],
+      photos: photos is List
+          ? photos
+              .whereType<Map<String, dynamic>>()
+              .map((photo) => OrderPhoto(
+                    url: _text(photo['url']) ?? '',
+                    stage: stageFromApiOrNull(photo['stage']),
+                  ))
+              .where((photo) => photo.url.isNotEmpty)
+              .toList()
+          : const [],
+      hasDetail: items is List,
+    );
+  }
 }
+
+String? _text(Object? value) {
+  if (value == null) return null;
+  final text = '$value'.trim();
+  return text.isEmpty ? null : text;
+}
+
+/// The server marks its timestamps with a zone, so this is the phone's local time.
+DateTime? _date(Object? value) => value is String && value.isNotEmpty
+    ? DateTime.tryParse(value)?.toLocal()
+    : null;

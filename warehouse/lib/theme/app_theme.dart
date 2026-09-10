@@ -63,10 +63,12 @@ class AppColors extends ThemeExtension<AppColors> {
     outOfStock: Color(0xFFF2857C),
   );
 
+  /// Packed keeps the amber and Audited the green the warehouse's two stages
+  /// always had, so a colour means the same step it did before.
   Color forStage(FulfilmentStage stage) => switch (stage) {
         FulfilmentStage.ordered => ordered,
-        FulfilmentStage.prepared => prepared,
-        FulfilmentStage.checked => checked,
+        FulfilmentStage.packed => prepared,
+        FulfilmentStage.audited => checked,
         FulfilmentStage.pickedUp => pickedUp,
         FulfilmentStage.delivered => delivered,
         FulfilmentStage.cancelled => cancelled,

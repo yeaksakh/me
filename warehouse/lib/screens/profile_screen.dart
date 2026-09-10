@@ -65,7 +65,7 @@ class ProfileScreen extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         '${staff.role.label}'
-                        '${staff.staffCode == null ? '' : ' · ${staff.staffCode}'}',
+                        '${staff.username == null ? '' : ' · ${staff.username}'}',
                         style: TextStyle(color: scheme.onSurfaceVariant),
                       ),
                       Text(
@@ -83,7 +83,7 @@ class ProfileScreen extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           const Text(
-            'Today',
+            'Shipments',
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 12),
@@ -91,19 +91,19 @@ class ProfileScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: StatTile(
-                  icon: Icons.inventory_2,
-                  label: 'Prepared',
-                  value: '${tasks.preparedToday}',
-                  tone: colors.prepared,
+                  icon: Icons.assignment_outlined,
+                  label: 'To pack',
+                  value: '${tasks.toPackCount}',
+                  tone: colors.ordered,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: StatTile(
-                  icon: Icons.fact_check,
-                  label: 'Checked',
-                  value: '${tasks.checkedToday}',
-                  tone: colors.checked,
+                  icon: Icons.inventory_2,
+                  label: 'Packed',
+                  value: '${tasks.packedCount}',
+                  tone: colors.prepared,
                 ),
               ),
               const SizedBox(width: 12),
@@ -126,12 +126,12 @@ class ProfileScreen extends StatelessWidget {
             child: Column(
               children: [
                 _Permission(
-                  label: 'Prepare orders',
+                  label: 'Accept and pack shipments',
                   granted: staff.role.canPrepare,
                 ),
                 const Divider(height: 22),
                 _Permission(
-                  label: 'Sign off checks',
+                  label: 'Mark shipments audited',
                   granted: staff.role.canCheck,
                 ),
                 const Divider(height: 22),

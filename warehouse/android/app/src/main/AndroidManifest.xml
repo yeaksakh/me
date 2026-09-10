@@ -1,6 +1,10 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Signing in to yeaksa.com. The debug and profile manifests add this on
+         their own, so without it here only a release build cannot connect. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
+
     <application
-        android:label="warehouse"
+        android:label="WareHouseMgt"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

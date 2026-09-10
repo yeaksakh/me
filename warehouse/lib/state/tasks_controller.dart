@@ -1,234 +1,202 @@
 import 'package:flutter/foundation.dart';
 
-import '../data/warehouse_repository.dart';
+import '../data/shipments_api.dart';
 import '../models/fulfilment_stage.dart';
 import '../models/order.dart';
 import '../models/staff.dart';
-import '../utils/formatters.dart';
 
-/// Owns the order book and the rules for moving an order through the warehouse.
+/// The shipments, as the website's /shipments page has them, and the moves staff
+/// make on them: accept, tick each item into the box, mark packed, mark audited.
 ///
-/// The rules are the point of this class. Anyone can draw three lists; what
-/// stops a half-picked order reaching the loading bay is that [advance] refuses
-/// it.
+/// The server is the record and enforces every rule
+/// (`core/api/views_shipments.py`). The few this class checks first -- every item
+/// ticked before Packed, only a supervisor audits -- are there so a button can
+/// say why it is waiting, instead of sending a request it knows will be refused.
 class TasksController extends ChangeNotifier {
-  TasksController(this._repository);
+  TasksController(this._api, {this.onUnauthorized});
 
-  final WarehouseRepository _repository;
+  final ShipmentsApi _api;
 
-  List<Order> _orders = const [];
-  bool _loading = false;
+  /// Called when the server says the session is gone, so the app signs out
+  /// rather than failing on every pull.
+  final VoidCallback? onUnauthorized;
+
+  final Map<FulfilmentStage, List<Order>> _queues = {};
+  final Map<FulfilmentStage, int> _counts = {};
+  final Map<String, Order> _details = {};
+  final Set<FulfilmentStage> _loading = {};
+  bool _busy = false;
   String? _error;
 
-  bool get loading => _loading;
+  /// True while a change is on its way to the server. Buttons wait on it, so a
+  /// double tap cannot send the same move twice.
+  bool get busy => _busy;
   String? get error => _error;
-  List<Order> get all => List<Order>.unmodifiable(_orders);
 
-  Future<void> load() async {
-    _loading = true;
-    _error = null;
-    notifyListeners();
-    try {
-      _orders = await _repository.fetchOrders();
-    } catch (_) {
-      _error = 'Could not load orders. Pull to retry.';
-    } finally {
-      _loading = false;
-      notifyListeners();
-    }
-  }
+  bool isLoading(FulfilmentStage stage) => _loading.contains(stage);
+  bool hasLoaded(FulfilmentStage stage) => _queues.containsKey(stage);
 
-  /// Orders sitting at [stage], oldest first.
-  ///
-  /// Oldest first is deliberate and the opposite of the rider app's feed: a
-  /// queue of work is worked front to back, so the order that has been waiting
-  /// longest is the one at the top of the screen.
-  List<Order> queue(FulfilmentStage stage) {
-    final list = _orders.where((order) => order.stage == stage).toList()
-      ..sort((a, b) => a.placedAt.compareTo(b.placedAt));
-    return list;
-  }
+  /// Shipments at [stage], newest first, as the website lists them.
+  List<Order> queue(FulfilmentStage stage) =>
+      List<Order>.unmodifiable(_queues[stage] ?? const <Order>[]);
 
+  /// The server's count for [stage], which covers the whole status rather than
+  /// only the loaded page.
   int queueCount(FulfilmentStage stage) =>
-      _orders.where((order) => order.stage == stage).length;
+      _counts[stage] ?? _queues[stage]?.length ?? 0;
 
-  /// Everything still in the building, across all three queues.
-  int get openCount => _orders.where((order) => order.stage.isOpen).length;
+  int get toPackCount => queueCount(FulfilmentStage.ordered);
+  int get packedCount => queueCount(FulfilmentStage.packed);
 
-  /// Orders this app got as far as `checked` today -- the day's output.
-  int get checkedToday {
-    final now = DateTime.now();
-    return _orders
-        .where((order) =>
-            order.checkedAt != null && isSameDay(order.checkedAt!, now))
-        .length;
-  }
-
-  int get preparedToday {
-    final now = DateTime.now();
-    return _orders
-        .where((order) =>
-            order.preparedAt != null && isSameDay(order.preparedAt!, now))
-        .length;
-  }
-
-  /// Waiting on a driver: packed, checked, and still here.
-  int get awaitingDriver => queueCount(FulfilmentStage.checked);
-
-  /// The oldest order still unprepared, if the floor is behind.
-  Order? get oldestWaiting {
-    final waiting = queue(FulfilmentStage.ordered);
-    return waiting.isEmpty ? null : waiting.first;
-  }
-
-  Order? orderById(String orderId) {
-    for (final order in _orders) {
-      if (order.id == orderId) return order;
+  /// The freshest copy of a shipment: the opened one when there is one.
+  Order? orderById(String id) {
+    final opened = _details[id];
+    if (opened != null) return opened;
+    for (final list in _queues.values) {
+      for (final order in list) {
+        if (order.id == id) return order;
+      }
     }
     return null;
   }
 
-  /// Record progress on one line, then republish.
-  Future<bool> setLinePicked(
-    String orderId,
-    String lineId,
-    int picked,
-  ) async {
+  Future<void> load(FulfilmentStage stage) async {
+    _loading.add(stage);
+    _error = null;
+    notifyListeners();
     try {
-      await _repository.setLinePicked(orderId, lineId, picked);
-      _error = null;
+      final page = await _api.list(stage);
+      _queues[stage] = page.orders;
+      _counts
+        ..clear()
+        ..addAll(page.counts);
+    } on ShipmentsException catch (failure) {
+      _fail(failure);
+    } finally {
+      _loading.remove(stage);
       notifyListeners();
-      return true;
-    } catch (_) {
-      _error = 'That line could not be updated.';
-      notifyListeners();
-      return false;
     }
   }
 
-  /// Fill a line to its ordered quantity, or empty it. What a checkbox does.
-  Future<bool> setLineComplete(
-    String orderId,
-    String lineId, {
-    required bool complete,
-  }) async {
-    final line = orderById(orderId)?.lineById(lineId);
-    if (line == null) return false;
-    return setLinePicked(orderId, lineId, complete ? line.quantity : 0);
-  }
-
-  /// Add one unit to the line a scanned code belongs to.
-  ///
-  /// Returns the line it landed on, or null when the code is not on this order
-  /// -- the caller turns that into "wrong item for this order", which is the
-  /// single most useful thing a warehouse scanner can tell someone.
-  Future<OrderLine?> applyScan(String orderId, String code) async {
-    final order = orderById(orderId);
-    if (order == null) return null;
-    final line = order.lineForCode(code);
-    if (line == null) return null;
-    if (line.isComplete) return line;
-    await setLinePicked(orderId, line.id, line.picked + 1);
-    return line;
-  }
-
-  Future<bool> setNote(String orderId, String? note) async {
-    try {
-      await _repository.setStaffNote(orderId, note);
-      notifyListeners();
-      return true;
-    } catch (_) {
-      _error = 'That note could not be saved.';
-      notifyListeners();
-      return false;
+  /// Every tab, fresh. Opened shipments are forgotten too: they may belong to
+  /// whoever used the handset before.
+  Future<void> refreshAll() async {
+    _details.clear();
+    for (final stage in kStaffQueues) {
+      await load(stage);
     }
   }
 
-  /// Move an order to the next stage this app owns.
-  ///
-  /// Refuses when:
-  ///  - the order is not in a stage staff can advance (it is with the driver);
-  ///  - [staff] does not hold the role for the next stage;
-  ///  - the pick is short and nobody has written down why.
-  ///
-  /// That last one is the important one. A short pick is a real and normal
-  /// event -- the shelf was wrong, the item was damaged -- but it must not leave
-  /// the building unremarked, or the customer finds out instead of the shop.
-  Future<bool> advance(String orderId, {required Staff staff}) async {
-    final order = orderById(orderId);
+  /// Fetches a shipment's items and photos, which a list row does not carry.
+  Future<Order?> openDetail(String id) async {
+    try {
+      final order = await _api.detail(id);
+      _put(order);
+      return order;
+    } on ShipmentsException catch (failure) {
+      _fail(failure);
+      return null;
+    } finally {
+      notifyListeners();
+    }
+  }
+
+  Future<bool> accept(String id) => _write(() => _api.accept(id));
+
+  Future<bool> release(String id) => _write(() => _api.release(id));
+
+  Future<bool> setLinePacked(String id, String lineId,
+          {required bool packed}) =>
+      _write(() => _api.packLine(id, lineId, packed: packed),
+          reloadQueues: false);
+
+  /// Refused here while an item is unticked, with how many are left -- the rule
+  /// the website's Packed button enforces, and the server after it.
+  Future<bool> markPacked(String id) async {
+    final order = orderById(id);
     if (order == null) return false;
-
-    final next = order.stage.nextForStaff;
-    if (next == null) {
-      _error = order.stage == FulfilmentStage.checked
-          ? 'This order is packed and waiting for the driver to collect it.'
-          : 'This order has left the warehouse.';
+    if (!order.isFullyPacked) {
+      _error = 'Tick every item first (${order.unpackedCount} left).';
       notifyListeners();
       return false;
     }
-
-    if (!_roleAllows(staff, next)) {
-      _error = 'Only a checker or supervisor can sign off a check.';
-      notifyListeners();
-      return false;
-    }
-
-    if (order.hasShortage && (order.staffNote?.isEmpty ?? true)) {
-      _error = 'Some items are short. Add a note saying why before continuing.';
-      notifyListeners();
-      return false;
-    }
-
-    try {
-      await _repository.setStage(orderId, next);
-      _error = null;
-      notifyListeners();
-      return true;
-    } catch (_) {
-      _error = 'That order could not be updated.';
-      notifyListeners();
-      return false;
-    }
+    return _write(() => _api.setStatus(id, FulfilmentStage.packed));
   }
 
-  bool _roleAllows(Staff staff, FulfilmentStage next) => switch (next) {
-        FulfilmentStage.prepared => staff.role.canPrepare,
-        FulfilmentStage.checked => staff.role.canCheck,
-        _ => false,
-      };
-
-  /// Send an order back a stage, for when a check fails.
-  ///
-  /// The checker finding a mistake is the system working, so there has to be a
-  /// way back to the packer that is not "cancel the order".
-  Future<bool> sendBack(String orderId, {required Staff staff}) async {
-    final order = orderById(orderId);
-    if (order == null) return false;
-    if (order.stage != FulfilmentStage.prepared) {
-      _error = 'Only an order waiting to be checked can go back.';
-      notifyListeners();
-      return false;
-    }
+  /// A second pair of eyes on a packed shipment, so it is a supervisor's.
+  Future<bool> markAudited(String id, {required Staff staff}) async {
     if (!staff.role.canCheck) {
-      _error = 'Only a checker or supervisor can send an order back.';
+      _error = 'Only a supervisor can mark a shipment audited.';
       notifyListeners();
       return false;
     }
-    try {
-      await _repository.setStage(orderId, FulfilmentStage.ordered);
-      _error = null;
-      notifyListeners();
-      return true;
-    } catch (_) {
-      _error = 'That order could not be updated.';
-      notifyListeners();
-      return false;
-    }
+    return _write(() => _api.setStatus(id, FulfilmentStage.audited));
+  }
+
+  /// Ticks the item a scanned SKU belongs to.
+  ///
+  /// Returns the item it landed on, or null when the code is not on this
+  /// shipment -- which the screen reports as "wrong item", the single most
+  /// useful thing a warehouse scanner can say.
+  Future<OrderLine?> applyScan(String id, String code) async {
+    final order = orderById(id);
+    final line = order?.lineForCode(code);
+    if (order == null || line == null) return null;
+    if (!line.packed) await setLinePacked(id, line.id, packed: true);
+    return line;
   }
 
   void clearError() {
     if (_error == null) return;
     _error = null;
     notifyListeners();
+  }
+
+  Future<bool> _write(
+    Future<Order> Function() send, {
+    bool reloadQueues = true,
+  }) async {
+    if (_busy) return false;
+    _busy = true;
+    _error = null;
+    notifyListeners();
+    try {
+      _put(await send());
+      // A move changes every tab's count, so they are re-read rather than
+      // guessed. A tick changes none of them.
+      if (reloadQueues) {
+        for (final stage in kStaffQueues) {
+          if (hasLoaded(stage)) await load(stage);
+        }
+      }
+      return true;
+    } on ShipmentsException catch (failure) {
+      _fail(failure);
+      return false;
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
+
+  /// Keeps the answer as the opened copy, and moves it between the loaded tabs
+  /// so the lists are right before the reload lands.
+  void _put(Order order) {
+    _details[order.id] = order;
+    for (final stage in _queues.keys.toList()) {
+      final list =
+          _queues[stage]!.where((existing) => existing.id != order.id).toList();
+      if (stage == order.stage) {
+        list
+          ..add(order)
+          ..sort((a, b) => b.placedAt.compareTo(a.placedAt));
+      }
+      _queues[stage] = list;
+    }
+  }
+
+  void _fail(ShipmentsException failure) {
+    _error = failure.message;
+    if (failure.isUnauthorized) onUnauthorized?.call();
   }
 }

@@ -7,23 +7,31 @@ import '../utils/formatters.dart';
 import 'section_card.dart';
 import 'stage_chip.dart';
 
-/// One order in a queue.
+/// One shipment in a tab.
 ///
-/// Leads with the order code and how long it has been waiting, because in a
-/// queue worked front-to-back those are the two things that decide what a person
-/// picks up next.
+/// Leads with the invoice number and how long it has been waiting, because in a
+/// queue worked front to back those decide what a person picks up next -- and,
+/// while it is `ordered`, whether anyone has taken it yet.
 class OrderTaskCard extends StatelessWidget {
-  const OrderTaskCard({super.key, required this.order, this.onTap});
+  const OrderTaskCard({
+    super.key,
+    required this.order,
+    this.staffId,
+    this.onTap,
+  });
 
   final Order order;
+
+  /// Who is signed in, so the card can say "Yours" rather than their own name.
+  final String? staffId;
   final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final colors = context.appColors;
-    final progress = order.pickProgress;
-    final partlyPicked = progress > 0 && progress < 1;
+    final ordered = order.stage == FulfilmentStage.ordered;
+    final partlyPacked = ordered && order.packedCount > 0 && !order.isFullyPacked;
 
     return SectionCard(
       onTap: onTap,
@@ -51,19 +59,19 @@ class OrderTaskCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           // Wrap, not Row: three facts and their spacers overflow a 360px
-          // phone, and a fact that has been clipped off the edge is worse than
-          // one that moved to a second line.
+          // phone, and a fact clipped off the edge is worse than one that moved
+          // to a second line.
           Wrap(
             spacing: 14,
             runSpacing: 6,
             children: [
               _Fact(
                 icon: Icons.inventory_2_outlined,
-                text: plural(order.lineCount, 'line'),
+                text: plural(order.lineCount, 'item'),
               ),
               _Fact(
                 icon: Icons.numbers,
-                text: plural(order.unitCount, 'unit'),
+                text: plural(order.totalQuantity.round(), 'unit'),
               ),
               _Fact(
                 icon: Icons.schedule,
@@ -71,46 +79,60 @@ class OrderTaskCard extends StatelessWidget {
               ),
             ],
           ),
-          if (partlyPicked) ...[
+          if (partlyPacked) ...[
             const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: LinearProgressIndicator(
-                value: progress,
+                value: order.packProgress,
                 minHeight: 6,
                 backgroundColor: scheme.surfaceContainerHighest,
-                valueColor: AlwaysStoppedAnimation(
-                  colors.forStage(order.stage),
-                ),
+                valueColor: AlwaysStoppedAnimation(colors.forStage(order.stage)),
               ),
             ),
             const SizedBox(height: 6),
             Text(
-              '${order.pickedCount} of ${order.unitCount} picked',
+              '${order.packedCount} of ${order.lineCount} packed',
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
           ],
-          if (order.isCashOnDelivery || order.staffNote != null) ...[
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (order.isCashOnDelivery)
-                  _Tag(
-                    icon: Icons.payments_outlined,
-                    label: 'Collect cash',
-                    color: colors.prepared,
-                  ),
-                if (order.staffNote != null)
-                  _Tag(
-                    icon: Icons.sticky_note_2_outlined,
-                    label: 'Has a note',
-                    color: scheme.onSurfaceVariant,
-                  ),
-              ],
-            ),
-          ],
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (ordered && !order.isAccepted)
+                _Tag(
+                  icon: Icons.assignment_ind_outlined,
+                  label: 'Not accepted',
+                  color: colors.ordered,
+                )
+              else if (ordered && order.isAcceptedBy(staffId))
+                _Tag(
+                  icon: Icons.person,
+                  label: 'Yours',
+                  color: colors.checked,
+                )
+              else if (order.isAccepted)
+                _Tag(
+                  icon: Icons.person_outline,
+                  label: 'With ${order.preparedBy!.name}',
+                  color: scheme.onSurfaceVariant,
+                ),
+              if (order.isCashOnDelivery)
+                _Tag(
+                  icon: Icons.payments_outlined,
+                  label: 'Collect cash',
+                  color: colors.prepared,
+                ),
+              if (order.note.isNotEmpty)
+                _Tag(
+                  icon: Icons.sticky_note_2_outlined,
+                  label: 'Has a note',
+                  color: scheme.onSurfaceVariant,
+                ),
+            ],
+          ),
         ],
       ),
     );
@@ -160,12 +182,15 @@ class _Tag extends StatelessWidget {
         children: [
           Icon(icon, size: 13, color: color),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 11.5,
-              fontWeight: FontWeight.w600,
-              color: color,
+          Flexible(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11.5,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
             ),
           ),
         ],
@@ -174,30 +199,30 @@ class _Tag extends StatelessWidget {
   }
 }
 
-/// Empty-queue copy, phrased per stage. A blank "To prepare" tab means the floor
-/// is caught up, which is worth saying rather than showing a generic shrug.
+/// Empty-tab copy, phrased per status. A blank Ordered tab means the floor is
+/// caught up, which is worth saying rather than showing a generic shrug.
 ({IconData icon, String title, String message}) emptyQueueCopy(
   FulfilmentStage stage,
 ) =>
     switch (stage) {
       FulfilmentStage.ordered => (
           icon: Icons.check_circle_outline,
-          title: 'Nothing to prepare',
-          message: 'Every new order has been packed. New ones land here.',
+          title: 'Nothing to pack',
+          message: 'New orders land here. Accept one to start packing it.',
         ),
-      FulfilmentStage.prepared => (
+      FulfilmentStage.packed => (
           icon: Icons.fact_check_outlined,
-          title: 'Nothing to check',
-          message: 'Packed orders waiting for a second pair of eyes show here.',
+          title: 'Nothing waiting for audit',
+          message: 'Packed shipments wait here until a supervisor checks them.',
         ),
-      FulfilmentStage.checked => (
+      FulfilmentStage.audited => (
           icon: Icons.local_shipping_outlined,
-          title: 'Nothing waiting for a driver',
-          message: 'Checked orders sit here until a rider collects them.',
+          title: 'Nothing waiting for a rider',
+          message: 'Audited shipments sit here until the rider picks them up.',
         ),
       _ => (
           icon: Icons.inbox_outlined,
           title: 'Nothing here',
-          message: 'No orders at this stage.',
+          message: 'No shipments at this status.',
         ),
     };
