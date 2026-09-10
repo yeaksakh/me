@@ -56,7 +56,9 @@ class OrderLine {
     this.variant,
     this.parentId,
     this.imageUrl,
-    this.location,
+    this.rack = '',
+    this.row = '',
+    this.position = '',
     this.packed = false,
     this.packedBy,
     this.packedAt,
@@ -80,14 +82,31 @@ class OrderLine {
 
   final String? imageUrl;
 
-  /// Rack-row-position at this branch, e.g. "A-01-2". Null when it is not binned.
-  final String? location;
+  /// Where it sits at this branch, from the ERP's product racks. Any of the
+  /// three may be blank.
+  final String rack;
+  final String row;
+  final String position;
 
   final bool packed;
   final StaffRef? packedBy;
   final DateTime? packedAt;
 
   bool get isBundleItem => parentId != null;
+
+  bool get hasLocation =>
+      rack.isNotEmpty || row.isNotEmpty || position.isNotEmpty;
+
+  /// The shelf to walk to, spelt out -- "Rack K · Row K6/0 · Position K6" --
+  /// or null when the shop has not binned this product.
+  String? get location {
+    if (!hasLocation) return null;
+    return [
+      if (rack.isNotEmpty) 'Rack $rack',
+      if (row.isNotEmpty) 'Row $row',
+      if (position.isNotEmpty) 'Position $position',
+    ].join('  ·  ');
+  }
 
   String get displayName => variant == null ? name : '$name  ·  $variant';
 
@@ -115,17 +134,15 @@ class OrderLine {
         sku: sku,
         quantity: quantity,
         imageUrl: imageUrl,
-        location: location,
+        rack: rack,
+        row: row,
+        position: position,
         packed: packed ?? this.packed,
         packedBy: clearPackedBy ? null : (packedBy ?? this.packedBy),
         packedAt: packedAt,
       );
 
   factory OrderLine.fromApi(Map<String, dynamic> json) {
-    final place = [json['rack'], json['row'], json['position']]
-        .map(_text)
-        .whereType<String>()
-        .join('-');
     return OrderLine(
       id: '${json['id']}',
       parentId: json['parent_id'] == null ? null : '${json['parent_id']}',
@@ -134,7 +151,9 @@ class OrderLine {
       sku: _text(json['sku']) ?? '',
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0,
       imageUrl: _text(json['image']),
-      location: place.isEmpty ? null : place,
+      rack: _text(json['rack']) ?? '',
+      row: _text(json['row']) ?? '',
+      position: _text(json['position']) ?? '',
       packed: json['packed'] == true,
       packedBy: StaffRef.fromApi(json['packed_by']),
       packedAt: _date(json['packed_at']),

@@ -146,6 +146,26 @@ void main() {
     expect(find.text('Hand back'), findsOneWidget);
   });
 
+  testWidgets('an accepted shipment says who has it and where each item sits',
+      (tester) async {
+    await signIn(tester, orders: [
+      buildOrder(id: '1', preparedById: supervisor.id, lines: [
+        buildLine(id: 'a', rack: 'K', row: 'K6/0', position: 'K6'),
+        buildLine(id: 'b', name: 'Loose thing'),
+      ]),
+    ]);
+    await openShipment(tester, 'YK-1');
+
+    expect(find.text('Accepted by Sokha Chan (you)'), findsOneWidget);
+    expect(find.text('Rack K  ·  Row K6/0  ·  Position K6'), findsOneWidget);
+    expect(find.text('No rack location set'), findsOneWidget);
+    // The keyboard must not cover the items: the scan box waits to be tapped.
+    expect(
+      tester.widget<TextField>(find.byType(TextField).first).autofocus,
+      isFalse,
+    );
+  });
+
   testWidgets('ticking every item and marking packed moves it to Packed',
       (tester) async {
     await signIn(tester, orders: [

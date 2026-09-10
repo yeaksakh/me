@@ -60,6 +60,9 @@ OrderLine buildLine({
   double quantity = 2,
   bool packed = false,
   String? parentId,
+  String rack = '',
+  String row = '',
+  String position = '',
 }) =>
     OrderLine(
       id: id,
@@ -67,6 +70,9 @@ OrderLine buildLine({
       name: name,
       quantity: quantity,
       parentId: parentId,
+      rack: rack,
+      row: row,
+      position: position,
       packed: packed,
       packedBy: packed ? StaffRef(id: supervisor.id, name: supervisor.name) : null,
     );

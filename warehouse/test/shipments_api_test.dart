@@ -138,7 +138,7 @@ void main() {
     final sauce = order.lines.last;
 
     expect(order.hasDetail, isTrue);
-    expect(rice.location, 'A-01-2');
+    expect(rice.location, 'Rack A  ·  Row 01  ·  Position 2');
     expect(rice.packed, isTrue);
     expect(rice.packedBy!.name, 'Sok Dara');
     expect(rice.imageUrl, isNull);
@@ -147,6 +147,11 @@ void main() {
     expect(sauce.parentId, '900');
     expect(sauce.displayName, contains('700 ml'));
     expect(sauce.location, isNull);
+    expect(sauce.hasLocation, isFalse);
+    expect(
+      const OrderLine(id: 'x', name: 'x', quantity: 1, rack: 'K').location,
+      'Rack K',
+    );
     expect(sauce.quantityLabel, '1.5');
     expect(sauce.imageUrl, 'http://example.test/img.webp');
     expect(order.photos.single.stage, FulfilmentStage.packed);

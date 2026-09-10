@@ -45,9 +45,10 @@ class _ScanFieldState extends State<ScanField> {
   void _submit(String raw) {
     final code = raw.trim();
     // Clear and refocus even on an empty submit: a scanner that fires Enter
-    // twice must not leave the field holding half of the next barcode.
+    // twice must not leave the field holding half of the next barcode, and a
+    // scanner that is mid-order must not lose the box after its first scan.
     _controller.clear();
-    if (widget.autofocus) _focusNode.requestFocus();
+    _focusNode.requestFocus();
     if (code.isEmpty) return;
     widget.onScan(code);
   }

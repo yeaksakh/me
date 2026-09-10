@@ -174,6 +174,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   const SizedBox(height: 8),
                   _Row(icon: Icons.store_outlined, label: order.locationName),
                 ],
+                if (order.isAccepted) ...[
+                  const SizedBox(height: 8),
+                  _Row(
+                    icon: Icons.assignment_ind,
+                    label: 'Accepted by ${order.preparedBy!.name}'
+                        '${mine ? ' (you)' : ''}',
+                    tone: mine ? colors.checked : null,
+                  ),
+                ],
                 const SizedBox(height: 8),
                 _Row(
                   icon: order.isCashOnDelivery
@@ -246,10 +255,17 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           ),
           if (packing) ...[
             const SizedBox(height: 12),
-            ScanField(onScan: _handleScan, hintText: 'Scan or type a SKU'),
+            // Not focused on arrival: on a phone that raises the keyboard,
+            // which covered the very items the packer came to tick. A wedge
+            // scanner needs the box tapped once; it keeps focus after each scan.
+            ScanField(
+              onScan: _handleScan,
+              hintText: 'Scan or type a SKU',
+              autofocus: false,
+            ),
             const SizedBox(height: 6),
             Text(
-              'A scan ticks the matching item. Or tap an item.',
+              'Tap an item to tick it, or scan its SKU.',
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant),
             ),
           ],

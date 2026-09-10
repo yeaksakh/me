@@ -78,16 +78,46 @@ class PickLineTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (line.location != null)
-                        Text(
-                          line.location!,
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                            color: scheme.primary,
-                          ),
+                      // The shelf first and largest: it is read from across
+                      // the aisle, before the name matters.
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: line.hasLocation
+                              ? scheme.primary.withAlpha(22)
+                              : scheme.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(8),
                         ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.shelves,
+                              size: 16,
+                              color: line.hasLocation
+                                  ? scheme.primary
+                                  : scheme.outline,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                line.location ?? 'No rack location set',
+                                style: TextStyle(
+                                  fontSize: line.hasLocation ? 15 : 12,
+                                  fontWeight: line.hasLocation
+                                      ? FontWeight.w700
+                                      : FontWeight.w400,
+                                  color: line.hasLocation
+                                      ? scheme.primary
+                                      : scheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                       Text(
                         line.displayName,
                         style: const TextStyle(
