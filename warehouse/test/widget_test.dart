@@ -2,25 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:warehouse/app.dart';
 import 'package:warehouse/models/fulfilment_stage.dart';
+import 'package:warehouse/models/hrm.dart';
 import 'package:warehouse/models/order.dart';
+import 'package:warehouse/services/camera.dart';
+import 'package:warehouse/services/location.dart';
 
 import 'fixtures.dart';
+import 'hrm_fixtures.dart';
 
 /// Pumps the app on a phone-width but very tall surface.
 ///
 /// Width stays phone-sized so the layout under test is the real one; the height
 /// is stretched so a screen's whole ListView is built at once and a finder does
 /// not miss a widget merely because it is below the fold.
-Future<void> pumpApp(WidgetTester tester, {List<Order>? orders}) async {
+Future<void> pumpApp(WidgetTester tester,
+    {List<Order>? orders, FakeHrmApi? hrm}) async {
   tester.view.physicalSize = const Size(420, 2600);
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  // No location service and no camera under flutter_test.
+  LocationService.current = () async => null;
+  Camera.takePhoto = () async => null;
 
   await tester.pumpWidget(
     WarehouseApp(
       repository: repositoryWith(),
       auth: FakeAuthApi(),
       shipments: FakeShipmentsApi(orders: orders),
+      hrm: hrm ?? FakeHrmApi(),
     ),
   );
   await tester.pumpAndSettle();
@@ -67,9 +76,16 @@ Future<void> submitSignIn(
 }
 
 /// Pumps the app with fixtures and signs in, which every screen sits behind.
-Future<void> signIn(WidgetTester tester, {List<Order>? orders}) async {
-  await pumpApp(tester, orders: orders);
+Future<void> signIn(WidgetTester tester,
+    {List<Order>? orders, FakeHrmApi? hrm}) async {
+  await pumpApp(tester, orders: orders, hrm: hrm);
   await submitSignIn(tester);
+}
+
+/// Signs in and opens the HRM tab.
+Future<void> openHrm(WidgetTester tester, {FakeHrmApi? hrm}) async {
+  await signIn(tester, hrm: hrm);
+  await openTab(tester, Icons.badge_outlined);
 }
 
 void main() {
@@ -319,7 +335,9 @@ void main() {
   testWidgets('a stock count runs from start to submit', (tester) async {
     await signIn(tester);
 
-    await openTab(tester, Icons.checklist_outlined);
+    await openTab(tester, Icons.inventory_2_outlined);
+    await tester.tap(find.byTooltip('Stock count'));
+    await tester.pumpAndSettle();
 
     expect(find.text('No count open'), findsOneWidget);
 
@@ -361,5 +379,185 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Sign in'), findsOneWidget);
+  });
+
+  group('HRM', () {
+    testWidgets('the tab offers Clock in, and a punch flips it to Clock out',
+        (tester) async {
+      final hrm = FakeHrmApi();
+      await openHrm(tester, hrm: hrm);
+
+      expect(find.text('Not clocked in'), findsOneWidget);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Clock in'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Start your shift now?'), findsOneWidget);
+      await tester.enterText(find.byType(TextField).last, 'front gate');
+      await tester.tap(find.widgetWithText(FilledButton, 'Clock in'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Clocked in'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Clock out'), findsOneWidget);
+      expect(find.textContaining('Clocked in at'), findsOneWidget);
+      expect(hrm.punches.single['action'], 'in');
+      expect(hrm.punches.single['note'], 'front gate');
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Clock out'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Clock out'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Not clocked in'), findsOneWidget);
+      expect(hrm.punches.last['action'], 'out');
+    });
+
+    testWidgets("a shift opened elsewhere shows as open, with since when",
+        (tester) async {
+      await openHrm(tester, hrm: FakeHrmApi(shifts: [
+        buildShift(clockIn: DateTime.now().subtract(const Duration(hours: 2))),
+      ]));
+
+      expect(find.text('Clocked in'), findsOneWidget);
+      expect(find.textContaining('Since'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Clock out'), findsOneWidget);
+    });
+
+    testWidgets("the server's refusal is shown as it comes", (tester) async {
+      final hrm = FakeHrmApi();
+      await openHrm(tester, hrm: hrm);
+      // The kiosk clocked them in after the screen loaded.
+      hrm.shifts.add(buildShift(clockIn: DateTime.now()));
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Clock in'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Clock in'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('This user is already clocked in.'), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Clock out'), findsOneWidget);
+    });
+
+    testWidgets('attendance lists the shifts with their hours', (tester) async {
+      final start = DateTime.now().subtract(const Duration(hours: 9));
+      await openHrm(tester, hrm: FakeHrmApi(shifts: [
+        buildShift(
+          clockIn: start,
+          clockOut: start.add(const Duration(hours: 8, minutes: 30)),
+          note: 'yard',
+        ),
+      ]));
+
+      await tester.tap(find.text('Attendance'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('8h 30m'), findsWidgets);
+      expect(find.text('yard'), findsOneWidget);
+      expect(find.text('Days worked'), findsOneWidget);
+    });
+
+    testWidgets('leave can be requested and lands as pending', (tester) async {
+      await openHrm(tester);
+
+      await tester.tap(find.text('Leave'));
+      await tester.pumpAndSettle();
+      expect(find.text('No leave requests'), findsOneWidget);
+
+      await tester.tap(find.text('Request leave'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<LeaveType>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('ច្បាប់ឈឺ (Sick leave)').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Fever');
+      await tester.tap(find.text('Send request'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Leave requested — waiting for approval.'), findsOneWidget);
+      expect(find.text('Pending'), findsOneWidget);
+      expect(find.text('Fever'), findsOneWidget);
+    });
+
+    testWidgets('a request without a kind of leave is stopped', (tester) async {
+      await openHrm(tester);
+      await tester.tap(find.text('Leave'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Request leave'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Send request'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Choose the kind of leave.'), findsOneWidget);
+    });
+
+    testWidgets('a supervisor approves a request', (tester) async {
+      final hrm = FakeHrmApi(leaves: [
+        buildLeave(id: 'l1', userName: 'Sok Dara', reason: 'Wedding'),
+      ]);
+      await openHrm(tester, hrm: hrm);
+
+      await tester.tap(find.text('Leave approvals'));
+      await tester.pumpAndSettle();
+      expect(find.text('Sok Dara'), findsOneWidget);
+
+      await tester.tap(find.text('Wedding'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Approve'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Sok Dara: Approved.'), findsOneWidget);
+      expect(hrm.statusChanges, [LeaveStatus.approved]);
+    });
+
+    testWidgets('holidays list the year, coming up first', (tester) async {
+      final soon = DateTime.now().add(const Duration(days: 20));
+      await openHrm(tester, hrm: FakeHrmApi(holidays: [
+        Holiday(id: '1', name: 'Pchum Ben', start: soon,
+            end: soon.add(const Duration(days: 2))),
+        Holiday(id: '2', name: 'Khmer New Year', start: DateTime(2026, 4, 14),
+            end: DateTime(2026, 4, 16)),
+      ]));
+
+      await tester.tap(find.text('Holidays'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Coming up'), findsOneWidget);
+      expect(find.text('Pchum Ben'), findsOneWidget);
+      expect(find.text('Already passed'), findsOneWidget);
+      expect(find.text('Khmer New Year'), findsOneWidget);
+    });
+
+    testWidgets('payroll lists the months and opens a payslip', (tester) async {
+      await openHrm(tester, hrm: FakeHrmApi(
+        payrolls: [
+          const PayrollSummary(id: '331', month: '2026-08', netPay: 412.75,
+              basicSalary: 450, paidOn: null),
+        ],
+        payslips: {
+          '331': const Payslip(
+            id: '331', monthLabel: 'August 2026', netPay: 412.75,
+            basicSalary: 450, totalEarnings: 470, totalDeductions: 57.25,
+            lines: [
+              PayLine(label: 'Basic salary', amount: 450, kind: 'base'),
+              PayLine(label: 'Late', amount: 7.25, kind: 'minus', when: '3 days'),
+            ],
+            presentDays: 24, absentDays: 1, scheduledDays: 25, lateMinutes: 42,
+          ),
+        },
+      ));
+
+      await tester.tap(find.text('Payroll'));
+      await tester.pumpAndSettle();
+      expect(find.text('August 2026'), findsOneWidget);
+      expect(find.text(r'$412.75'), findsWidgets);
+
+      await tester.tap(find.text('August 2026'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Net pay'), findsWidgets);
+      expect(find.text('Late'), findsWidgets);
+      expect(find.text('24 of 25'), findsOneWidget);
+      expect(find.text('Not paid yet'), findsOneWidget);
+    });
   });
 }

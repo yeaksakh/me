@@ -3,6 +3,22 @@
          their own, so without it here only a release build cannot connect. -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
+    <!-- Where someone was standing when they clocked in or out, for the
+         attendance record the website keeps. Coarse is enough for a yard and
+         is the weaker ask; fine is declared because Android grants coarse-only
+         when both are requested and the person chooses it. -->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
+    <!-- The clock-in selfie. image_picker hands off to the camera app by
+         intent, so no CAMERA permission is needed. But on Android 11+ the
+         intent has to be declared or the picker finds nothing to launch. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE"/>
+        </intent>
+    </queries>
+
     <application
         android:label="WareHouseMgt"
         android:name="${applicationName}"

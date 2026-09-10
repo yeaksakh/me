@@ -41,7 +41,13 @@ class Staff {
     required this.role,
     required this.warehouseName,
     this.username,
+    this.currencySymbol = r'$',
   });
+
+  /// The shop's currency, for the payslip.
+  final String currencySymbol;
+
+  bool get isAdmin => role == StaffRole.supervisor;
 
   final String id;
   final String name;
@@ -68,6 +74,7 @@ class Staff {
         'role': role.apiValue,
         'warehouseName': warehouseName,
         'username': username,
+        'currencySymbol': currencySymbol,
       };
 
   factory Staff.fromJson(Map<String, dynamic> json) => Staff(
@@ -76,5 +83,6 @@ class Staff {
         role: staffRoleFromApi(json['role']),
         warehouseName: json['warehouseName'] as String,
         username: json['username'] as String?,
+        currencySymbol: json['currencySymbol'] as String? ?? r'$',
       );
 }

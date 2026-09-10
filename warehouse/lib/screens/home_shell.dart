@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 
-import 'count_screen.dart';
+import 'hrm_screen.dart';
 import 'profile_screen.dart';
 import 'stock_screen.dart';
 import 'tasks_screen.dart';
 
 /// Bottom-tab container. Four areas, because a fifth would not fit a thumb.
+///
+/// A stock count lives inside Stock rather than on a tab of its own: it is a
+/// rare job, and the HR tab -- clocking in, leave, pay -- is a daily one.
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
 
@@ -19,7 +22,7 @@ class _HomeShellState extends State<HomeShell> {
   static const _tabs = [
     TasksScreen(),
     StockScreen(),
-    CountScreen(),
+    HrmScreen(),
     ProfileScreen(),
   ];
 
@@ -42,9 +45,9 @@ class _HomeShellState extends State<HomeShell> {
             label: 'Stock',
           ),
           NavigationDestination(
-            icon: Icon(Icons.checklist_outlined),
-            selectedIcon: Icon(Icons.checklist),
-            label: 'Count',
+            icon: Icon(Icons.badge_outlined),
+            selectedIcon: Icon(Icons.badge),
+            label: 'HRM',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),

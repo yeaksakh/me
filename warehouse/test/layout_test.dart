@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:warehouse/app.dart';
 import 'package:warehouse/models/fulfilment_stage.dart';
+import 'package:warehouse/models/hrm.dart';
+import 'package:warehouse/screens/hrm_screen.dart';
+import 'package:warehouse/services/camera.dart';
+import 'package:warehouse/services/location.dart';
 
 import 'fixtures.dart';
+import 'hrm_fixtures.dart';
 
 /// Layout guards at the size the app is actually used at.
 ///
@@ -17,11 +22,43 @@ Future<void> pumpAt(WidgetTester tester, Size size) async {
   tester.view.physicalSize = size;
   tester.view.devicePixelRatio = 1.0;
   addTearDown(tester.view.reset);
+  LocationService.current = () async => null;
+  Camera.takePhoto = () async => null;
 
+  final start = DateTime.now().subtract(const Duration(hours: 9));
   await tester.pumpWidget(
     WarehouseApp(
       repository: repositoryWith(),
       auth: FakeAuthApi(),
+      hrm: FakeHrmApi(
+        shifts: [
+          buildShift(clockIn: start, clockOut: start.add(const Duration(hours: 8)),
+              note: 'A note long enough to wrap on a narrow phone screen'),
+          buildShift(id: 'local:2', clockIn: DateTime.now()),
+        ],
+        leaves: [buildLeave(reason: 'A reason long enough to wrap twice over')],
+        holidays: [
+          Holiday(id: '1', name: 'Pchum Ben', start: DateTime.now(),
+              end: DateTime.now().add(const Duration(days: 2)),
+              note: 'Three days off for everyone in the building'),
+        ],
+        payrolls: [
+          const PayrollSummary(id: '1', month: '2026-08', netPay: 1650000,
+              basicSalary: 1500000),
+        ],
+        payslips: {
+          '1': const Payslip(
+            id: '1', monthLabel: 'August 2026', netPay: 1650000,
+            lines: [
+              PayLine(label: 'Basic salary', amount: 1500000, kind: 'base'),
+              PayLine(label: 'A very long allowance name that wraps', amount: 150000),
+            ],
+            presentDays: 24, absentDays: 2, scheduledDays: 26, lateMinutes: 90,
+            clockedHours: 190.5, shift: '08:00 – 17:00',
+            absentDates: ['2026-08-04', '2026-08-19'],
+          ),
+        },
+      ),
       shipments: FakeShipmentsApi(orders: [
         // Accepted, part-packed, with a bundle item and a long name: the
         // busiest detail screen there is.
@@ -112,23 +149,67 @@ void main() {
     await tester.pumpAndSettle();
   });
 
-  testWidgets('stock, count and profile lay out on a small phone',
+  testWidgets('stock, HRM and profile lay out on a small phone',
       (tester) async {
     await pumpAt(tester, _smallPhone);
 
     await openTab(tester, Icons.inventory_2_outlined);
-    await openTab(tester, Icons.checklist_outlined);
+    await openTab(tester, Icons.badge_outlined);
     await openTab(tester, Icons.person_outline);
   });
 
   testWidgets('an open count lays out on a small phone', (tester) async {
     await pumpAt(tester, _smallPhone);
 
-    await openTab(tester, Icons.checklist_outlined);
+    await openTab(tester, Icons.inventory_2_outlined);
+    await tester.tap(find.byTooltip('Stock count'));
+    await tester.pumpAndSettle();
     await tester.tap(find.textContaining('Count everything'));
     await tester.pumpAndSettle();
 
     expect(find.text('Not counted yet'), findsWidgets);
+  });
+
+  testWidgets('every HRM screen lays out on a small phone', (tester) async {
+    await pumpAt(tester, _smallPhone);
+    await openTab(tester, Icons.badge_outlined);
+
+    // The punch dialog, then each door and the page behind it.
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Clock out'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    for (final door in ['Attendance', 'Leave', 'Holidays', 'Leave approvals', 'Payroll']) {
+      // The lower doors sit below the fold on a small phone.
+      await tester.scrollUntilVisible(
+        find.text(door),
+        120,
+        scrollable: find
+            .descendant(of: find.byType(HrmScreen), matching: find.byType(Scrollable))
+            .first,
+      );
+      await tester.tap(find.text(door));
+      await tester.pumpAndSettle();
+      await tester.drag(find.byType(ListView).last, const Offset(0, -600));
+      await tester.pumpAndSettle();
+      if (door == 'Leave') {
+        await tester.tap(find.text('Request leave'));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
+      if (door == 'Payroll') {
+        await tester.tap(find.text('August 2026'));
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(ListView).last, const Offset(0, -900));
+        await tester.pumpAndSettle();
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+      }
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+    }
   });
 
   testWidgets('a landscape handset still lays out', (tester) async {

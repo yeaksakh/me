@@ -148,5 +148,8 @@ Staff staffFromLogin(Map<String, dynamic> data) {
     role: data['is_admin'] == true ? StaffRole.supervisor : StaffRole.packer,
     warehouseName: (business['name'] as String?) ?? '',
     username: username,
+    currencySymbol: (business['symbol'] as String?)?.trim().isNotEmpty == true
+        ? (business['symbol'] as String).trim()
+        : r'$',
   );
 }

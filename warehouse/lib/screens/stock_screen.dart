@@ -8,6 +8,7 @@ import '../widgets/empty_state.dart';
 import '../widgets/scan_field.dart';
 import '../widgets/stat_tile.dart';
 import '../widgets/stock_row.dart';
+import 'count_screen.dart';
 import 'stock_detail_screen.dart';
 
 /// The catalogue: search it, scan into it, tap through to adjust.
@@ -71,6 +72,17 @@ class _StockScreenState extends State<StockScreen> {
             onPressed: () => setState(() => _scanning = !_scanning),
             icon: Icon(_scanning ? Icons.close : Icons.qr_code_scanner),
             tooltip: _scanning ? 'Close scanner' : 'Scan',
+          ),
+          // The count lives here rather than on a tab: it is a rare job, and
+          // the tab went to HR, which is a daily one.
+          IconButton(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const CountScreen()),
+            ),
+            icon: Icon(
+              stock.hasOpenCount ? Icons.checklist_rtl : Icons.checklist_outlined,
+            ),
+            tooltip: 'Stock count',
           ),
           const SizedBox(width: 8),
         ],

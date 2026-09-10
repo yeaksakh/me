@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import 'data/api_client.dart';
 import 'data/auth_api.dart';
+import 'data/hrm_api.dart';
 import 'data/local_store.dart';
 import 'data/shipments_api.dart';
 import 'data/warehouse_repository.dart';
 import 'screens/home_shell.dart';
 import 'screens/login_screen.dart';
+import 'state/hrm_controller.dart';
 import 'state/server_config.dart';
 import 'state/session_controller.dart';
 import 'state/stock_controller.dart';
@@ -20,6 +23,7 @@ class WarehouseApp extends StatelessWidget {
     this.store,
     this.auth,
     this.shipments,
+    this.hrm,
   });
 
   /// Injectable so tests can supply their own fixtures.
@@ -29,6 +33,7 @@ class WarehouseApp extends StatelessWidget {
   /// Injectable so tests can sign in and work shipments without the network.
   final AuthApi? auth;
   final ShipmentsApi? shipments;
+  final HrmApi? hrm;
 
   @override
   Widget build(BuildContext context) {
@@ -62,6 +67,17 @@ class WarehouseApp extends StatelessWidget {
                   baseUrl: () => context.read<ServerConfig>().baseUrl,
                   token: () => context.read<SessionController>().token,
                 ),
+            onUnauthorized: () => context.read<SessionController>().signOut(),
+          ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => HrmController(
+            hrm ??
+                HrmApi(ApiClient(
+                  baseUrl: () => context.read<ServerConfig>().baseUrl,
+                  token: () => context.read<SessionController>().token,
+                )),
+            userId: () => context.read<SessionController>().staff?.id,
             onUnauthorized: () => context.read<SessionController>().signOut(),
           ),
         ),
