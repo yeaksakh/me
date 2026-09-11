@@ -87,21 +87,24 @@ class _HomeShellState extends State<HomeShell> {
               offstage: !_staged.contains(i),
               child: IgnorePointer(
                 ignoring: i != _index,
-                child: TickerMode(
-                  enabled: i == _index,
-                  child: AnimatedOpacity(
-                    opacity: i == _index ? 1 : 0,
+                child: AnimatedOpacity(
+                  opacity: i == _index ? 1 : 0,
+                  duration: kMotion,
+                  curve: Curves.easeOut,
+                  onEnd: () {
+                    if (i != _index && mounted) {
+                      setState(() => _staged.remove(i));
+                    }
+                  },
+                  child: AnimatedSlide(
+                    offset: Offset(0, i == _index ? 0 : 0.015),
                     duration: kMotion,
-                    curve: Curves.easeOut,
-                    onEnd: () {
-                      if (i != _index && mounted) {
-                        setState(() => _staged.remove(i));
-                      }
-                    },
-                    child: AnimatedSlide(
-                      offset: Offset(0, i == _index ? 0 : 0.015),
-                      duration: kMotion,
-                      curve: Curves.easeOutCubic,
+                    curve: Curves.easeOutCubic,
+                    // Inside the fade, not around it: a muted ticker would
+                    // freeze the fade-out itself, and the tab would never go
+                    // offstage.
+                    child: TickerMode(
+                      enabled: i == _index,
                       child: _tabs[i],
                     ),
                   ),
