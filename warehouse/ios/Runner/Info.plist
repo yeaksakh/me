@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>warehouse</string>
+	<string>Yeaksarehouse</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -40,5 +40,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>To photograph a packed shipment and when clocking in.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>To attach a photo from your library.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>To record where you clocked in or out.</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 </dict>
 </plist>

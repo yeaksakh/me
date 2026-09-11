@@ -1,0 +1,54 @@
+# Builds the iPhone app on a cloud Mac and hands it to TestFlight.
+#
+# Run it from the Actions tab ("Run workflow"), or push a tag like ios-v1.0.1.
+# It needs the repository secrets named in ios/fastlane/Fastfile.
+name: TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      changelog:
+        description: "What changed (shown to testers)"
+        required: false
+        default: "Staff build"
+  push:
+    tags: ["ios-v*"]
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: warehouse
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+
+      - name: Install fastlane
+        run: gem install fastlane -N
+
+      - name: Flutter dependencies
+        run: flutter pub get
+
+      - name: Build and upload to TestFlight
+        working-directory: warehouse/ios
+        env:
+          APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          APP_STORE_CONNECT_KEY_P8_BASE64: ${{ secrets.APP_STORE_CONNECT_KEY_P8_BASE64 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          MATCH_GIT_URL: ${{ secrets.MATCH_GIT_URL }}
+          MATCH_GIT_BASIC_AUTHORIZATION: ${{ secrets.MATCH_GIT_BASIC_AUTHORIZATION }}
+          MATCH_PASSWORD: ${{ secrets.MATCH_PASSWORD }}
+          CHANGELOG: ${{ github.event.inputs.changelog }}
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: fastlane beta
