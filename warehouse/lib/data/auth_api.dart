@@ -57,7 +57,7 @@ class AuthApi {
       // Names the token on the owner's Settings -> API page, so a lost
       // handset's session can be found and revoked there.
       'device_name':
-          'WareHouseMgt (${kIsWeb ? 'web' : defaultTargetPlatform.name})',
+          'Yeaksarehouse (${kIsWeb ? 'web' : defaultTargetPlatform.name})',
     });
 
     final data = body['data'];

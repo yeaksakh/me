@@ -123,14 +123,14 @@ class _LoginScreenState extends State<LoginScreen> {
                           child: Image.asset(
                             'assets/images/logo.png',
                             fit: BoxFit.cover,
-                            semanticLabel: 'WareHouseMgt',
+                            semanticLabel: 'Yeaksarehouse',
                           ),
                         ),
                       ),
                     ),
                     const SizedBox(height: 18),
                     const Text(
-                      'WareHouseMgt',
+                      'Yeaksarehouse',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 28,

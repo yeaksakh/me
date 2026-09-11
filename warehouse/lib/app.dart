@@ -95,7 +95,7 @@ class WarehouseApp extends StatelessWidget {
         ),
       ],
       child: MaterialApp(
-        title: 'WareHouseMgt',
+        title: 'Yeaksarehouse',
         debugShowCheckedModeBanner: false,
         theme: AppTheme.light(),
         // Light only: the palette is the app's own, and a warehouse handset
